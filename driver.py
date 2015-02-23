@@ -8,7 +8,11 @@ from jinja2 import Template
 
 
 class Driver(object):
-	def __init__(self, haproxy_stat_port, 
+	def __init__(self, 
+		queries_json,
+		connection_json,
+		workflow_json,
+		haproxy_stat_port, 
 		haproxy_data_port, data_ports, 
 		haproxy_var_port, var_ports,
 		query_parallelism, linkages, 
@@ -17,6 +21,10 @@ class Driver(object):
 		self.dataservers = []
 		self.haproxies = []
 		self.varservers = []
+
+		self.queries_json = queries_json
+		self.connection_json = connection_json
+		self.workflow_json = workflow_json
 
 		self.haproxy_stat_port = haproxy_stat_port
 		
@@ -58,16 +66,18 @@ class Driver(object):
 		sys.exit(1)
 	
 	@staticmethod
-	def start_dataserver(port, loglevel):
+	def start_dataserver(port, loglevel, queries_config, connection_config):
 		with open('logs/data.server.%s.out' % port, 'ab') as out, open('logs/data.server.%s.err' % port, 'ab') as err:
 			cmd_str = """python lars/data_node.py
 				--http_port=%(port)s
 				--log=logs/data.server.%(port)s.log
 				--level=%(loglevel)s
-				config/connection.json config/queries.json""".replace('\n', ' ').replace('\t', '')
+				%(connection)s %(queries)s""".replace('\n', ' ').replace('\t', '')
 			cmd= shlex.split(cmd_str % {
 				'port':port,
-				'loglevel':loglevel
+				'loglevel':loglevel,
+				'connection':connection_config,
+				'queries':queries_config
 			})
 			return Popen(cmd, stdout=out, stderr=err)
 
@@ -84,7 +94,7 @@ class Driver(object):
 			return Popen(cmd, stdout=out, stderr=err)
 	
 	@staticmethod
-	def start_varserver(port, haproxy_data_port, query_parallelism, linkages, loglevel, var_script):
+	def start_varserver(port, haproxy_data_port, query_parallelism, linkages, loglevel, workflow_config):
 		linkages = "simpletest,test,slowtest"
 		with open('logs/var.server.%s.out' % port, 'ab') as out, open('logs/var.server.%s.err' % port, 'ab') as err:
 			cmd_str = """python lars/var_node.py 
@@ -95,14 +105,14 @@ class Driver(object):
 				-p %(query_parallelism)s
 				--data_uri=http://127.0.0.1:%(haproxy_data_port)s/api/0.1 
 				--linkages=%(linkages)s
-				%(var_script)s""".replace('\n', ' ').replace('\t','')
+				%(workflow)s""".replace('\n', ' ').replace('\t','')
 			cmd = shlex.split(cmd_str % {
 				'port':port, 
 				'haproxy_data_port':haproxy_data_port,
 				'linkages':linkages,
 				'query_parallelism':query_parallelism,
 				'loglevel':loglevel,
-				'var_script':var_script
+				'workflow':workflow_config
 				})
 
 			return Popen(cmd, stdout=out, stderr=err)
@@ -112,13 +122,13 @@ class Driver(object):
 		
 		try:
 			print "Starting dataservers..."
-			self.dataservers = [ Driver.start_dataserver(port, self.loglevel) for port in self.data_ports ]
+			self.dataservers = [ Driver.start_dataserver(port, self.loglevel, self.queries_json, self.connection_json) for port in self.data_ports ]
 			print "Done."
 			print "Starting HAProxy..."
 			self.haproxies =   [ Driver.start_haproxy(self.haproxy_stat_port, self.haproxy_data_port, self.haproxy_var_port, self.data_ports, self.var_ports) ] 
 			print "Done."
 			print "Starting variable servers..."
-			self.varservers =  [ Driver.start_varserver(port, self.haproxy_data_port, self.query_parallelism, self.linkages, self.loglevel, self.variable_script) for port in self.var_ports ]
+			self.varservers =  [ Driver.start_varserver(port, self.haproxy_data_port, self.query_parallelism, self.linkages, self.loglevel, self.workflow_json) for port in self.var_ports ]
 			print "Done"
 		except:
 			print ""
@@ -131,12 +141,16 @@ if __name__ == '__main__':
 
 	parser = argparse.ArgumentParser(description="Driver program for Lars")
 
+	parser.add_argument('queries.json', nargs=1, help='JSON query configuration file for data nodes.')
+	parser.add_argument('connection.json', nargs=1, help='JSON connection configuration file for data nodes.')
+	parser.add_argument('workflow.json', nargs=1, help='JSON workflow configuration for var nodes.')
+
 	parser.add_argument('--input_file', metavar='FILE', help='Optional input file to run through.')
 	parser.add_argument('--loglevel', metavar='LEVEL', choices=['INFO','DEBUG'], default='INFO', help='Logging level: %(choices)s (default: %(default)s)')
 	
 	group = parser.add_argument_group('Data nodes')
 	group.add_argument('--data_start_port', metavar='PORT', default=9000, type=int, help='Starting HTTP port for data servers to listen on. (default: %(default)s)')
-	group.add_argument('--num_data_nodes', metavar='NUM', default=1, type=int, help='Number of data nodes to run. (default: %default)')
+	group.add_argument('--num_data_nodes', metavar='NUM', default=1, type=int, help='Number of data nodes to run. (default: %(default)s')
 
 	group = parser.add_argument_group('Variable nodes')
 	group.add_argument('--var_start_port', metavar='PORT', default=9100, type=int, help='Starting HTTP port for variable servers to listen on. (default: %(default)s)')
@@ -155,6 +169,9 @@ if __name__ == '__main__':
 	var_ports =  [ args['var_start_port']+i  for i in range(args['num_var_nodes'])  ]
 
 	driver = Driver(
+		args['queries.json'][0],
+		args['connection.json'][0],
+		args['workflow.json'][0],
 		args['haproxy_stat_port'], 
 		args['haproxy_data_port'], 
 		data_ports, 
@@ -163,7 +180,7 @@ if __name__ == '__main__':
 		args['query_parallelism'], 
 		args['linkages'],
 		args['loglevel'],
-		args['variable_script']
+		args['variable_script'],
 	)
 
 	driver.start_all()

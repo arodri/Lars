@@ -1,0 +1,20 @@
+{
+	"workflow": {
+		"mappers" : [
+			{
+			"class" : "date_mapper.ObsDateMapper",
+			"linksetsName" : "linksets",
+			"obsDateField" : "obsDate",
+			"obsDateFormat" : "%Y%m%d"
+			},
+			{
+			"class" : "linkage_crosstab.LinkageCrosstab",
+			"durations" : [30,60,365,1024,10000],
+			"diffFields" : ["name"],
+			"prefix" : "magic",
+			"linksetsName" : "linksets"
+			}
+		
+		]
+	}
+}

@@ -18,15 +18,23 @@ from tornado.ioloop import IOLoop
 
 #from gevent.wsgi import WSGIServer
 
+from workflow import Workflow
+
+def JSONDefault(obj):
+	import datetime
+	if isinstance(obj, datetime.datetime):
+		return obj.strftime('%Y%m%d_%H:%M:%S.%f')
 
 class VariableGenerator(object):
-	def __init__(self, data_uri, query_parallelism, target_linkages, output_file, variable_script):
+	def __init__(self, data_uri, query_parallelism, target_linkages, output_file, workflow_config):
 		self.query_proc_pool = Pool(query_parallelism)
 		self.target_linkages = target_linkages
 		self.http_session = Session()
-		self.output_file = output_file	
-		self.variable_defs = imp.load_source('lars.var_def',variable_script)
+		self.output_file = output_file
 		self.data_uri = data_uri
+
+		self.workflow = Workflow()
+		self.workflow.buildJSON(workflow_config)
 
 	def getData(self, linkname, r):
 		logging.debug('[GET] [%s] with %s' % (linkname, r))
@@ -85,12 +93,16 @@ class VariableGenerator(object):
 		return 'OK'
 
 	def output(self, record):
-		self.output_file.write('%s\n' % json.dumps(record))
+		self.output_file.write('%s\n' % json.dumps(record, default=JSONDefault))
 		self.output_file.flush()
 
 	def calculateVariables(self, record):
 		start = time.time()
-		record = self.variable_defs.run(record)
+		try:
+			record = self.workflow.run(record)
+		except Exception,e:
+			logging.exception(e)
+			record['status']['vars'] = 'ERROR'
 		end = time.time()
 		vars_ms = '%0.2f' % ((end-start)*1000)
 		record['timings']['vars'] = vars_ms
@@ -135,7 +147,7 @@ if __name__ == '__main__':
 
 	parser = argparse.ArgumentParser(description="A REST-exposed database querying api.")
 
-	parser.add_argument('variable_script', nargs=1, metavar='PYTHON_SCRUPT', default='vars.py', help='Python script with a run(record) method. (default: %(default)s)')
+	parser.add_argument('workflow.json', nargs=1, type=argparse.FileType('r'), help='JSON workflow configuration.')
 	# required paramaters
 	parser.add_argument('--data_uri', metavar='HOST', default='127.0.0.1:8080/api/0.1', help='Data service to query')
 	parser.add_argument('-p', metavar='PARALLELISM', default=2, type=int, help='Query parallelism to use on each request. (default: %(default)s)')
@@ -153,10 +165,12 @@ if __name__ == '__main__':
 	print args
 	logging.basicConfig(level=getattr(logging, args['level']), filename=args['log'], filemode='a', format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
+	workflow_json = json.load(args['workflow.json'][0])
+	args['workflow.json'][0].close()
+
 	server = HTTPVariableServer(args['http_port'])
 
-	varget = VariableGenerator(args['data_uri'], args['p'], args['linkages'].split(','), args['o'], args['variable_script'][0]) 
-
+	varget = VariableGenerator(args['data_uri'], args['p'], args['linkages'].split(','), args['o'], workflow_json) 
 
 	server.add_route('/vars', varget.calculateAndOutput)
 	server.start()

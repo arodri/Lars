@@ -1,0 +1,24 @@
+{
+	"apis": [
+		{
+			"uri":"/api/0.1", 
+			"queries":[
+				{
+					"name":"test",
+					"params":["primary_id"],
+					"query":"SELECT SQL_NO_CACHE primary_id, 'Lars' as name, '20150101' AS observationDate FROM apps /* WHERE primary_id=%(primary_id)s */"
+				},
+				{
+					"name":"simpletest",
+					"params":[],
+					"query":"SELECT 1, '20150101' AS observationDate, 'Lars' as name"
+				},
+				{
+					"name":"slowtest",
+					"params":["primary_id","sleep_time"],
+					"query":"SELECT SQL_NO_CACHE primary_id, SLEEP(RAND()/10) AS slept, '20150101' AS observationDate, 'Lars' as name FROM apps /* WHERE primary_id=%(primary_id)s */"
+				}
+			]
+		}
+	]
+}
