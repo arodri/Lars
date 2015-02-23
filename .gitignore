@@ -1,0 +1,5 @@
+# Compiled python
+*.py[cod]
+
+# C extensions
+*.so
