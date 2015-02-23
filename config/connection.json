@@ -1,0 +1,4 @@
+{
+	"url":"mysql://user:password@localhost/vars",
+	"pool_size":2
+}
