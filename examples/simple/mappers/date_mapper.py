@@ -10,7 +10,7 @@ class ObsDateMapper(Mapper):
 		
 
 	def run(self,record):
-		record[self.obsDateOutput] = dt.strptime(record['request'][self.dateField],self.obsDateFmt)
+		record[self.obsDateOutput] = dt.strptime(record[self.dateField],self.obsDateFmt)
 		for lsName,ls in record[self.linksets].items():
 			for rec in ls:
 				rec[self.obsDateOutput] = dt.strptime(rec[self.dateField],self.obsDateFmt)

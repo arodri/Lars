@@ -1,4 +1,4 @@
 {
-	"url":"mysql://user:password@localhost/vars",
+	"url":"sqlite:///examples/simple/example.db",
 	"pool_size":2
 }
