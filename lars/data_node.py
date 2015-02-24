@@ -37,7 +37,10 @@ class HTTPDataServer(object):
 		self.app.add_url_rule("/", view_func=lambda: "OK")
 
 		logging.info('Opening connections')
-		self._cnx_pool = sqlalchemy.create_engine(db_config['url'], pool_size=db_config['pool_size'], echo=True)	
+		if 'sqlite' not in db_config['url']:
+			self._cnx_pool = sqlalchemy.create_engine(db_config['url'], pool_size=db_config['pool_size'], echo=True)
+		else:
+			self._cnx_pool = sqlalchemy.create_engine(db_config['url'], echo=True)
 		self.port=port
 
 	def _add_route(self, uri, name, query, param_template):

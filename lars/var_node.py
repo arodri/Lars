@@ -40,7 +40,9 @@ class VariableGenerator(object):
 		logging.debug('[GET] [%s] with %s' % (linkname, r))
 
 		j = {}
+		start = time.time()
 		try:
+			
 			resp = self.http_session.get("%s/%s" % (self.data_uri, linkname), params=r)
 			logging.debug('[GOT] [%s] %s' % (linkname, resp.status_code))
 			if resp.status_code == 200:
@@ -50,64 +52,81 @@ class VariableGenerator(object):
 		except Exception,e:
 			logging.exception(e)
 			j['status'] = 'ERROR - %s' % e.value
+		end = time.time()
+		j['linkset_time'] = '%0.2f' % ((end-start)*1000)
 		return j
 
-	def getAllData(self, r):
+	def getAllData(self, req):
 		def getter(ln):
-			return (ln, self.getData(ln, r))
+			return (ln, self.getData(ln, req['request']))
 		
-		#return dict( self.query_proc_pool.map(getter, self.target_linkages))
 		start = time.time()
 		data = dict(map(getter, self.target_linkages))
+		#return dict( self.query_proc_pool.map(getter, self.target_linkages))
 		end = time.time()
 
 		data_ms = '%0.2f' % ((end-start)*1000)
-	
-		record = {
-			'request':r,
-			'timings':{},
-			'linksets':{},
-			'status':{}
-		}
 
 		for (lsname, ls) in data.items():
 			if 'results' in ls:
-				record['linksets'][lsname] = ls['results']
+				req['linksets'][lsname] = ls['results']
 			if 'query_duration' in ls:
-				record['timings']['linksets:%s' % lsname] = ls['query_duration']
+				req['timings']['linksets:query:%s' % lsname] = ls['query_duration']
+			if 'linkset_time' in ls:
+				req['timings']['linksets:%s' % lsname] = ls['linkset_time']
 			if 'status' in ls:
-				record['status']['linksets:%s' % lsname] = ls['status']
+				req['status']['linksets:%s' % lsname] = ls['status']
 		
-		return record
+		return req
 
 	def calculateAndOutput(self):
+		start = time.time()
 		r = request.json
-		logging.debug(r)
-		record = self.getAllData(r)
-		logging.debug(record)
-		record = self.calculateVariables(record)
-		record['timings']['total'] = '%0.2f' % sum([ float(ms) for ms in record['timings'].values()])
-
-		logging.debug(record)
-		self.output(record)
+		req = {
+			'request':r,
+			'timings':{},
+			'variables':{},
+			'status':{},
+			'linksets':{}
+		}
+		
+		logging.debug("Before data")
+		logging.debug(req)
+		req = self.getAllData(req)
+		logging.debug("After data")
+		logging.debug(req)
+		
+		req = self.calculateVariables(req)
+		end = time.time()
+		tot_ms = (end-start)*1000
+		req['timings']['total'] = '%0.2f' % tot_ms
+		logging.debug("After variables")
+		logging.debug(req)
+		
+		self.output(req)
 		return 'OK'
 
 	def output(self, record):
 		self.output_file.write('%s\n' % json.dumps(record, default=JSONDefault))
 		self.output_file.flush()
 
-	def calculateVariables(self, record):
+	def calculateVariables(self, req):
 		start = time.time()
 		try:
-			record = self.workflow.run(record)
+			record = req['request']
+			record['linksets'] = req['linksets']
+			req['variables'] = self.workflow.run(record)
+			if 'timings' in req['variables']:
+				req['timings']['vars'] = req['variables']['timings']
 		except Exception,e:
 			logging.exception(e)
-			record['status']['vars'] = 'ERROR'
+			req['status']['vars'] = 'ERROR'
+			req['variables'] = {}
 		end = time.time()
 		vars_ms = '%0.2f' % ((end-start)*1000)
-		record['timings']['vars'] = vars_ms
+		req['timings']['vars:total'] = vars_ms
 
-		return record
+		return req
 
 class HTTPVariableServer(object):
 	def __init__(self, port):
