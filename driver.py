@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import signal,sys
 from subprocess import Popen
 from multiprocessing import Pool
@@ -16,7 +17,7 @@ class Driver(object):
 		haproxy_data_port, data_ports, 
 		haproxy_var_port, var_ports,
 		query_parallelism, linkages, 
-		loglevel, variable_script):
+		loglevel):
 
 		self.dataservers = []
 		self.haproxies = []
@@ -37,7 +38,6 @@ class Driver(object):
 		self.linkages = linkages
 
 		self.loglevel = loglevel
-		self.variable_script = variable_script
 
 	@staticmethod
 	def stop_process(process):
@@ -95,7 +95,6 @@ class Driver(object):
 	
 	@staticmethod
 	def start_varserver(port, haproxy_data_port, query_parallelism, linkages, loglevel, workflow_config):
-		linkages = "simpletest,test,slowtest"
 		with open('logs/var.server.%s.out' % port, 'ab') as out, open('logs/var.server.%s.err' % port, 'ab') as err:
 			cmd_str = """python lars/var_node.py 
 				--http_port=%(port)s 
@@ -123,12 +122,15 @@ class Driver(object):
 		try:
 			print "Starting dataservers..."
 			self.dataservers = [ Driver.start_dataserver(port, self.loglevel, self.queries_json, self.connection_json) for port in self.data_ports ]
+			print "Ports: %s" % str(self.data_ports)
 			print "Done."
 			print "Starting HAProxy..."
 			self.haproxies =   [ Driver.start_haproxy(self.haproxy_stat_port, self.haproxy_data_port, self.haproxy_var_port, self.data_ports, self.var_ports) ] 
+			print "Ports: %s (stats), %s (var), %s (data)" % (self.haproxy_stat_port, self.haproxy_var_port, self.haproxy_data_port)
 			print "Done."
 			print "Starting variable servers..."
 			self.varservers =  [ Driver.start_varserver(port, self.haproxy_data_port, self.query_parallelism, self.linkages, self.loglevel, self.workflow_json) for port in self.var_ports ]
+			print "Ports: %s" % str(self.var_ports)
 			print "Done"
 		except:
 			print ""
@@ -157,7 +159,6 @@ if __name__ == '__main__':
 	group.add_argument('--num_var_nodes', metavar='NUM', default=1, type=int, help='Number of variable nodes to run. (default: %(default)s)')
 	group.add_argument('--query_parallelism', metavar='PARALLELISM', default=1, type=int, help='Number of queries the variable nodes should run at a time for each request. (default: %(default)s)')
 	group.add_argument('--linkages', metavar='LINKAGES', default='test', help='CSV list of linkage queries to run on each variable request. (default: %(default)s)')
-	group.add_argument('--variable_script', metavar='SCRIPT', default='examples/vars.py', help='Script to import to get definition of variables. (default: %(default)s)')
 
 	group = parser.add_argument_group('HAProxy')
 	group.add_argument('--haproxy_stat_port', metavar='PORT', default=1936, type=int, help='HAProxy stat port. (default: %(default)s)')
@@ -179,8 +180,7 @@ if __name__ == '__main__':
 		var_ports,
 		args['query_parallelism'], 
 		args['linkages'],
-		args['loglevel'],
-		args['variable_script'],
+		args['loglevel']
 	)
 
 	driver.start_all()
