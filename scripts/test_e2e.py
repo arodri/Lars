@@ -1,5 +1,7 @@
+#!/usr/bin/env python
+
 import requests
-import uuid
+import uuid,sys
 
 from requests import Session
 
@@ -11,7 +13,8 @@ import random
 import json
 
 timings = []
-cnt = 200
+cnt = int(sys.argv[1])
+#cnt = 2000
 
 #http_client=HTTPClient()
 full_start=datetime.now()
@@ -28,13 +31,13 @@ def submit_request(i):
 	#r=1
 	#s.get('http://localhost:8080/api/0.1/slowtest?primary_id=%s&uuid=%s&sleep_time=%s' % (i, uuid.uuid4().int, r))
 	
-	r = json.dumps({'primary_id':i, 'sleep_time': r, 'uuid': uuid.uuid4().int, 'passthrough':'gerg'})
-	result = s.post('http://localhost:8081/vars', data=r, headers={'Content-type': 'application/json'})
-	print result.status_code
+	r = json.dumps({'primary_id':i, 'observationDate':'20150101', 'sleep_time': r, 'uuid': uuid.uuid4().int, 'passthrough':'gerg'})
+	result = s.post('http://localhost:8091/vars', data=r, headers={'Content-type': 'application/json'})
+	#print result.status_code
 	#ioloop.IOLoop.instance().start()
 	end = datetime.now()
 	return ((end-start).seconds*1000 + (end-start).microseconds/1000.0)
-poolsize=5
+poolsize=10
 p = Pool(poolsize)
 
 # parallel
