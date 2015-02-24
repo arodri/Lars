@@ -7,3 +7,6 @@
 # output files
 logs/*
 output/*
+*.log
+*.out
+*.err
