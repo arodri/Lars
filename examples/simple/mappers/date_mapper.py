@@ -3,6 +3,7 @@ from datetime import datetime as dt
 class ObsDateMapper(Mapper):
 
 	def loadConfigJSON(self,config):
+		self.name = config["name"]
 		self.dateField = "observationDate"
 		self.linksets = config["linksetsName"]
 		self.obsDateOutput = config["obsDateField"]

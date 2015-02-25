@@ -1,6 +1,8 @@
 import importlib
 import sys
 import json
+import logging
+from mapper import Mapper
 
 class Workflow(object):
 	
@@ -14,7 +16,9 @@ class Workflow(object):
 			thisMod= importlib.import_module(module_name)
 			thisMapClass = getattr(thisMod,class_name)
 			thisMap = thisMapClass()
+			thisMap.initJSON(mapperConfig)
 			thisMap.loadConfigJSON(mapperConfig)
+			thisMap.isValid(thisMap)
 			self.mappers.append(thisMap)
 
 	def run(self,record):
@@ -29,6 +33,8 @@ class Workflow(object):
 
 
 if __name__ == "__main__":
+	logging.basicConfig(level=logging.DEBUG)
+        recs = []
 	wfJSON = sys.argv[1]
 	records = sys.argv[2]
 	wf = Workflow()
@@ -38,6 +44,5 @@ if __name__ == "__main__":
 	with open(records,'rb') as recordFH:
 		for line in recordFH:
 			res = wf.run(json.loads(line))
-			print res
 
 

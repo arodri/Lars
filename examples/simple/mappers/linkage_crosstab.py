@@ -1,6 +1,7 @@
 from datetime import timedelta
+from mapper import Mapper
 
-class LinkageCrosstab:
+class LinkageCrosstab(Mapper):
 
 
 	def loadConfigJSON(self,config):
