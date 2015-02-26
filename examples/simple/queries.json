@@ -17,6 +17,16 @@
 					"name":"slowtest",
 					"params":["primary_id","sleep_time"],
 					"query":"SELECT primary_id, RANDOM() AS random, '20150101' AS observationDate, 'Lars' as name FROM apps /* WHERE primary_id=%(primary_id)s */"
+				},
+				{
+					"name":"name",
+					"params":[],
+					"query":"SELECT primary_id, '20150101' AS observationDate, 'Lars' as name, '12345' as zip, '123 Main' AS address FROM apps"
+				},
+				{
+					"name":"address",
+					"params":[],
+					"query":"SELECT primary_id, '20150201' AS observationDate, 'Sarl' as name, '54321' as zip, 'Main' AS address FROM apps"
 				}
 			]
 		}
