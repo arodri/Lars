@@ -26,7 +26,7 @@ def JSONDefault(obj):
 		return obj.strftime('%Y%m%d_%H:%M:%S.%f')
 
 class VariableGenerator(object):
-	def __init__(self, data_uri, query_parallelism, target_linkages, output_file, workflow_config):
+	def __init__(self, data_uri, query_parallelism, target_linkages, output_file, skip_linkages, workflow_config):
 		self.query_proc_pool = Pool(query_parallelism)
 		self.target_linkages = target_linkages
 		self.http_session = Session()
@@ -35,6 +35,8 @@ class VariableGenerator(object):
 
 		self.workflow = Workflow()
 		self.workflow.buildJSON(workflow_config)
+
+		self.skip_linkages = skip_linkages
 
 	def getData(self, linkname, r):
 		logging.debug('[GET] [%s] with %s' % (linkname, r))
@@ -90,11 +92,14 @@ class VariableGenerator(object):
 			'linksets':{}
 		}
 		
-		logging.debug("Before data")
-		logging.debug(req)
-		req = self.getAllData(req)
-		logging.debug("After data")
-		logging.debug(req)
+		if not self.skip_linkages:
+			logging.debug("Before data")
+			logging.debug(req)
+			req = self.getAllData(req)
+			logging.debug("After data")
+			logging.debug(req)
+		else:
+			logging.debug('Skipped linkages')
 		
 		req = self.calculateVariables(req)
 		end = time.time()
@@ -178,6 +183,7 @@ if __name__ == '__main__':
 	parser.add_argument('--http_port', metavar='PORT', default=9000, type=int, help='HTTP port to listen on. (default: %(default)s')
 	
 	parser.add_argument('--linkages',  metavar="LINKAGES", default="simpletest", help='CSV list of linksets to query the data api. (default: %(default)s)')
+	parser.add_argument('--skip_linkages', default=False, action='store_true', help='Skip linkage pulling step. (default %(default)s')
 
 	args = vars(parser.parse_args())
 
@@ -189,7 +195,7 @@ if __name__ == '__main__':
 
 	server = HTTPVariableServer(args['http_port'])
 
-	varget = VariableGenerator(args['data_uri'], args['p'], args['linkages'].split(','), args['o'], workflow_json) 
+	varget = VariableGenerator(args['data_uri'], args['p'], args['linkages'].split(','), args['o'], args['skip_linkages'], workflow_json) 
 
 	server.add_route('/vars', varget.calculateAndOutput)
 	server.start()

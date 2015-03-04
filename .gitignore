@@ -10,3 +10,6 @@ output/*
 *.log
 *.out
 *.err
+
+# tmp files
+*.swp

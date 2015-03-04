@@ -18,7 +18,7 @@ class AddressKeyMapper(Mapper):
 		addKey = None
 		for field in self.streetAddressFields:
 			thisAdd += record[field]
-		parseAdd = thisAdd.split(" ")
+		parseAdd = thisAdd.upper().split(" ")
 		try:
 			#check to see if the first part is a number
 			int(parseAdd[0])

@@ -9,12 +9,12 @@
 			"obsDateFormat" : "%Y%m%d"
 			},
 			{
-                        "class" : "address_mapper.AddressKeyMapper",
+			"class" : "address_mapper.AddressKeyMapper",
 			"name": "addressKey",
-                        "addressFields" : ["address"],
-                        "zip" : "zip",
-                        "addressKey" : "addressKey"
-                        },
+			"addressFields" : ["address"],
+			"zip" : "zip",
+			"addressKey" : "addressKey"
+			},
 			{
 			"class" : "linkage_crosstab.LinkageCrosstab",
 			"name" : "magicVariables",
@@ -23,7 +23,6 @@
 			"prefix" : "magic",
 			"linksetsName" : "linksets"
 			}
-		
 		],
 		"outputters" : [
 			{
