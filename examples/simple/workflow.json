@@ -24,6 +24,22 @@
 			"linksetsName" : "linksets"
 			}
 		
+		],
+		"outputters" : [
+			{
+			"fields" : ["addressKey"]
+			},
+			{
+			"class" : "outputter.DumpOutputter",
+			"outputFile" : "dump.addressKeys.out",
+			"after": "addressKey"
+			},
+			{
+			"formatFile" : "example.fmt",
+			"outputFile" : "example.vars.out",
+			"delimiter" : ","
+			}
 		]
+
 	}
 }
