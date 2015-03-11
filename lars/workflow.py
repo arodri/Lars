@@ -7,6 +7,9 @@ from outputter import *
 #todo- make class vars instead of strings
 
 class Workflow(object):
+	
+	def __init__(self):
+		self.logger = logging.getLogger('workflow')
 
 	def buildJSON(self, config,instanceID=None):
 		wf= config['workflow']
@@ -23,6 +26,7 @@ class Workflow(object):
 			mapperTup = (thisMap,[])
 			self.mappers.append(mapperTup)
 			self.mapperDict[thisMap.name] = mapperTup
+			self.logger.info("Parsed %s" % thisMap.name)
 		for outConfig in wf['outputters']:
 			#default outputter is delimited outputter
 			thisOutClass = DelimitedOutputter
