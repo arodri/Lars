@@ -15,6 +15,12 @@ from tornado.ioloop import IOLoop
 
 #from gevent.wsgi import WSGIServer
 
+def JSONDefault(obj):
+	import datetime
+	if isinstance(obj, datetime.datetime):
+		return obj.strftime('%Y%m%d_%H:%M:%S.%f')
+
+
 class HTTPDataServer(object):
 	"""
 	@param dict db_config 		connection configuration dictionary
@@ -57,7 +63,9 @@ class HTTPDataServer(object):
 			results = self._cnx_pool.execute(query, request.args)
 			end = time.time()
 			ms = ((end-start)*1000)
-			result_dicts = [ dict(zip(r.keys(), r.values())) for r in results.fetchall() ]
+			res = results.fetchall()
+			logging.debug(res)
+			result_dicts = [ dict(zip(r.keys(), r.values())) for r in res ]
 			
 			resp = {
 				'name':name,
@@ -68,7 +76,7 @@ class HTTPDataServer(object):
 				resp['avail_params'] = param_template
 				resp['query'] = query
 				resp['params'] = request.args
-			return json.dumps(resp)
+			return json.dumps(resp, default=JSONDefault)
 		return handler
 
 	def start(self):
