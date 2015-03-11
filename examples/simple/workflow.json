@@ -1,44 +1,82 @@
 {
 	"workflow": {
-		"mappers" : [
+		"mappers": [
 			{
-			"class" : "date_mapper.ObsDateMapper",
-			"name": "obsDateMapper",
-			"linksetsName" : "linksets",
-			"obsDateField" : "obsDate",
-			"obsDateFormat" : "%Y%m%d"
+				"class": "date_mapper.ObsDateMapper",
+				"linksetsName": "linksets",
+				"name": "obsDateMapper",
+				"obsDateField": "obsDate",
+				"obsDateFormat": "%Y%m%d"
 			},
 			{
-			"class" : "address_mapper.AddressKeyMapper",
-			"name": "addressKey",
-			"addressFields" : ["address"],
-			"zip" : "zip",
-			"addressKey" : "addressKey"
+				"addressFields": [
+					"address"
+				],
+				"addressKey": "addressKey",
+				"class": "address_mapper.AddressKeyMapper",
+				"name": "addressKey",
+				"zip": "zip"
 			},
 			{
-			"class" : "linkage_crosstab.LinkageCrosstab",
-			"name" : "magicVariables",
-			"durations" : [30,60,365,1024,10000],
-			"diffFields" : ["name"],
-			"prefix" : "magic",
-			"linksetsName" : "linksets"
+				"class": "linkage_crosstab.LinkageCrosstab",
+				"diffFields": [
+					"name"
+				],
+				"durations": [
+					30,
+					60,
+					365,
+					1024,
+					10000
+				],
+				"linksetsName": "linksets",
+				"name": "magicVariables",
+				"prefix": "magic"
+			},{
+				"class":"mappers.parallel.ParallelMapper",
+				"name":"just a test",
+				"pool_size": 2,
+				"mappers":[
+					{
+						"addressFields": [
+							"address"
+						],
+						"addressKey": "addressKey2",
+						"class": "address_mapper.AddressKeyMapper",
+						"name": "addressKey2",
+						"zip": "zip",
+						"provides": ["addressKey2"]
+					},
+					{
+						"addressFields": [
+							"address"
+						],
+						"addressKey": "addressKey3",
+						"class": "address_mapper.AddressKeyMapper",
+						"name": "addressKey3",
+						"zip": "zip",
+						"provides": ["addressKey3"]
+						
+					}
+				]
 			}
 		],
-		"outputters" : [
+		"outputters": [
 			{
-			"fields" : ["addressKey"]
+				"fields": [
+					"addressKey","addressKey2","addressKey3"
+				]
 			},
 			{
-			"class" : "outputter.DumpOutputter",
-			"outputFile" : "dump.addressKeys.out",
-			"after": "addressKey"
+				"after": "addressKey",
+				"class": "outputter.DumpOutputter",
+				"outputFile": "dump.addressKeys.out"
 			},
 			{
-			"formatFile" : "example.fmt",
-			"outputFile" : "example.vars.out",
-			"delimiter" : ","
+				"delimiter": ",",
+				"formatFile": "example.fmt",
+				"outputFile": "example.vars.out"
 			}
 		]
-
 	}
 }
