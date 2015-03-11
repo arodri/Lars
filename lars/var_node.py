@@ -1,5 +1,6 @@
 import argparse, sys, time, imp
-import logging, os, json
+import logging, os
+import json
 import subprocess, requests
 from requests import Session
 
@@ -26,15 +27,17 @@ def JSONDefault(obj):
 		return obj.strftime('%Y%m%d_%H:%M:%S.%f')
 
 class VariableGenerator(object):
-	def __init__(self, data_uri, query_parallelism, target_linkages, output_file, skip_linkages, workflow_config):
+	def __init__(self, data_uri, query_parallelism, target_linkages, output_file, skip_linkages, workflow_config, instanceID="0"):
 		self.query_proc_pool = Pool(query_parallelism)
 		self.target_linkages = target_linkages
 		self.http_session = Session()
 		self.output_file = output_file
 		self.data_uri = data_uri
 
+		self.instanceID = instanceID 
+
 		self.workflow = Workflow()
-		self.workflow.buildJSON(workflow_config)
+		self.workflow.buildJSON(workflow_config, instanceID)
 
 		self.skip_linkages = skip_linkages
 
@@ -113,6 +116,7 @@ class VariableGenerator(object):
 
 	def output(self, record):
 		self.output_file.write('%s\n' % json.dumps(record, default=JSONDefault))
+		#self.output_file.write('%s\n' % json.dumps(record))
 		self.output_file.flush()
 
 	def calculateVariables(self, req):
@@ -195,7 +199,7 @@ if __name__ == '__main__':
 
 	server = HTTPVariableServer(args['http_port'])
 
-	varget = VariableGenerator(args['data_uri'], args['p'], args['linkages'].split(','), args['o'], args['skip_linkages'], workflow_json) 
+	varget = VariableGenerator(args['data_uri'], args['p'], args['linkages'].split(','), args['o'], args['skip_linkages'], workflow_json, args['http_port']) 
 
 	server.add_route('/vars', varget.calculateAndOutput)
 	server.start()
