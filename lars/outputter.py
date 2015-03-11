@@ -48,7 +48,7 @@ class DelimitedOutputter(Outputter):
 			self.outFH = sys.stdout
 		else:
 			if instanceID != None:
-				outFile = "%s.%s" % (instanceID,outFile)
+				outFile = "%s.%s" % (outFile, instanceID)
 			self.outFH = open(outFile,'w')
 		#write header
 		self.outFH.write(self.delim.join(fieldNames)+"\n")
@@ -67,6 +67,7 @@ class DelimitedOutputter(Outputter):
 					raise KeyError("Unable to find field "+part+ " in "+ dotNote)
 			res.append(str(val))
 		self.outFH.write(self.delim.join(res)+"\n")
+		self.outFH.flush()
 
 class DumpOutputter(Outputter):
 	_OUTPUT_FILE="outputFile"
@@ -79,7 +80,7 @@ class DumpOutputter(Outputter):
 			self.outFH = sys.stdout
 		else:
 			if instanceID != None:
-				outFile = "%s.%s" % (instanceID,outFile)
+				outFile = "%s.%s" % (outFile. instanceID)
 			self.outFH = open(outFile,'w')
 
 	def output(self,record):
