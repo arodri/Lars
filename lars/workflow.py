@@ -2,7 +2,9 @@ import importlib
 import sys
 import json
 import logging
-from mapper import Mapper
+import sys
+
+import mapper 
 from outputter import * 
 #todo- make class vars instead of strings
 
@@ -10,36 +12,45 @@ class Workflow(object):
 	
 	def __init__(self):
 		self.logger = logging.getLogger('workflow')
+		self.timing = False
+		self.exceptOnMapperError = True
 
 	def buildJSON(self, config,instanceID=None):
 		wf= config['workflow']
 		self.mappers = []
 		self.mapperDict = {}
-		for mapperConfig in wf['mappers']:
-			module_name,class_name = mapperConfig["class"].split(".")
-			thisMod= importlib.import_module(module_name)
-			thisMapClass = getattr(thisMod,class_name)
-			thisMap = thisMapClass()
-			thisMap.initJSON(mapperConfig)
-			thisMap.loadConfigJSON(mapperConfig)
-			thisMap.isValid(thisMap)
-			mapperTup = (thisMap,[])
-			self.mappers.append(mapperTup)
-			self.mapperDict[thisMap.name] = mapperTup
-			self.logger.info("Parsed %s" % thisMap.name)
-		for outConfig in wf['outputters']:
-			#default outputter is delimited outputter
-			thisOutClass = DelimitedOutputter
-			if outConfig.has_key("class"):
-				module_name,class_name = outConfig["class"].split(".")
-				thisMod= importlib.import_module(module_name)
-				thisOutClass = getattr(thisMod,class_name)
-			thisOut = thisOutClass()
-			thisOut.loadConfigJSON(outConfig,instanceID=instanceID)
-			if thisOut.after==None:
-				self.mappers[-1][1].append(thisOut)
-			else:
-				self.mapperDict[thisOut.after][1].append(thisOut)
+		try:
+			for mapperConfig in wf['mappers']:
+				thisMap = mapper.buildFromJSON(mapperConfig)
+				mapperTup = (thisMap,[])
+				self.mappers.append(mapperTup)
+				self.mapperDict[thisMap.name] = mapperTup
+				self.logger.info("Parsed %s" % thisMap.name)
+			for outConfig in wf['outputters']:
+				#default outputter is delimited outputter
+				thisOutClass = DelimitedOutputter
+				if outConfig.has_key("class"):
+					module_name,class_name = outConfig["class"].split(".")
+					thisMod= importlib.import_module(module_name)
+					thisOutClass = getattr(thisMod,class_name)
+				thisOut = thisOutClass()
+				thisOut.loadConfigJSON(outConfig,instanceID=instanceID)
+				if thisOut.after==None:
+					self.mappers[-1][1].append(thisOut)
+				else:
+					self.mapperDict[thisOut.after][1].append(thisOut)
+		except mapper.MapperConfigurationException, e:
+			self.logger.error(e)
+			sys.exit(1)
+
+	def enableTiming(self):
+		self.timing = True
+	def disableTiming(self):
+		self.timing = False
+	def enableExceptionHandling(self):
+		self.exceptOnMapperError = False
+	def disableExceptionHandling(self):
+		self.exceptOnMapperError = True
 			
 
 	def run(self,record):
