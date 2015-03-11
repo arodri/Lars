@@ -4,7 +4,7 @@ import os
 import requests
 import logging
 import sys
-import json
+import ujson as json
 import argparse
 import csv
 import time
