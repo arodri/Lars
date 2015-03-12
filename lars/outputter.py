@@ -1,6 +1,11 @@
 import sys
 import json
 
+def JSONDefault(obj):
+	import datetime
+	if isinstance(obj, datetime.datetime):
+		return obj.strftime('%Y%m%d_%H:%M:%S.%f')
+
 class Outputter:
 	_AFTER="after"
 
@@ -84,7 +89,7 @@ class DumpOutputter(Outputter):
 			self.outFH = open(outFile,'w')
 
 	def output(self,record):
-		self.outFH.write(str(record)+"\n")
+		self.outFH.write(json.dumps(record, default=JSONDefault)+"\n")
 
 #todo: write a util function that can check for required config params, can work for mappers and outputters( and other)
 #todo: write closer to release resources, probably need for mapper as well

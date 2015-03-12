@@ -10,7 +10,7 @@ class ObsDateMapper(Mapper):
 		self.obsDateFmt = config.get("obsDateFormat","%Y%m%d")
 		
 
-	def run(self,record):
+	def process(self,record):
 		record[self.obsDateOutput] = dt.strptime(record[self.dateField],self.obsDateFmt)
 		for lsName,ls in record[self.linksets].items():
 			for rec in ls:

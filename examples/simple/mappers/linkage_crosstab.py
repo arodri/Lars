@@ -11,7 +11,7 @@ class LinkageCrosstab(Mapper):
 		self.setFields = dict([(field,set()) for field in self.diffFields])
 		self.linksets= config['linksetsName']
 	
-	def run(self,record):
+	def process(self,record):
 		obs = record['obsDate']
 		cutOffDates = {}
 		for dur in self.durs:

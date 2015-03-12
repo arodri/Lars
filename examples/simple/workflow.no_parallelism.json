@@ -37,11 +37,7 @@
 				"linksetsName": "linksets",
 				"name": "magicVariables",
 				"prefix": "magic"
-			},{
-				"class":"mappers.parallel.ParallelThreadMapper",
-				"name":"just a test",
-				"pool_size": 2,
-				"mappers":[
+			},
 					{
 						"addressFields": [
 							"address"
@@ -69,9 +65,9 @@
 						"query_logging": true,
 						"outputKey": "testQuery_out",
 						"queryString":"SELECT application_date FROM applications WHERE primary_ids='KAB19816'"
-					}
-				]
-			},
+					},
+				
+			
 			{
 				"class":"mappers.timer.EndTimer",
 				"name":"total_timer_end",

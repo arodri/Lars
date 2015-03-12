@@ -13,7 +13,7 @@ class AddressKeyMapper(Mapper):
 		self.logger = logging.getLogger("address_key_mapper")
 
 
-	def run(self,record):
+	def process(self,record):
 		thisAdd = ""
 		addKey = None
 		for field in self.streetAddressFields:

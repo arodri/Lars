@@ -7,8 +7,11 @@ class Mapper:
 	def isValid(self):
 		pass
 
-	def run(self, record):
-		raise NotImplementedError( "Should have implemented this")
+	def process(self, record):
+		try:
+			raise NotImplementedError( "%s: the 'process' method is not impleted." % self.name)
+		except KeyError:
+			raise NotImplementedError("One of the mappers does not have the 'process' method implemented")
 
 	def loadConfigJSON(self,config):
 		self.initJSON(config)
@@ -29,10 +32,10 @@ class Mapper:
 		except KeyError:
 			pass
 
-	def runWrapper(self, record, timing=True, error=True):
+	def processWrapper(self, record, timing=True, error=True):
 		start = time.time()
 		try:
-			record = self.run(record)
+			record = self.process(record)
 		except Exception, e:
 			self.logger.exception(e)
 			if error:
@@ -53,18 +56,32 @@ class Mapper:
 		except AttributeError:
 			raise MapperConfigurationException("%s cannot be parallelized, does not have a 'provides' attribute" % self.__class__.__name__)
 
-def buildFromJSON(config):
-	parsed_class_path = config["class"].split(".")
-	module_name,class_name = ('.'.join(parsed_class_path[:-1]), parsed_class_path[-1])
-	thisMod = importlib.import_module(module_name)
-	thisMapClass = getattr(thisMod, class_name)
-	thisMap = thisMapClass()
-	thisMap.initJSON(config)
-	thisMap.loadConfigJSON(config)
-	thisMap.isValid()
-	thisMap.initLogger()
+# Needed to pass a generic builder to a parallelized mapper so that the thread/process can instantiate the mapper on it's own.
+class MapperBuilder:
 
-	return thisMap
+	def getMapper(self):
+		raise NotImplementedError("Whoops, getMapper is not implemented for this builder")
+
+class JSONMapperBuilder(MapperBuilder):
+	def __init__(self, json_config):
+		self.config = json_config
+
+	@staticmethod
+	def buildFromJSON(config):
+		parsed_class_path = config["class"].split(".")
+		module_name,class_name = ('.'.join(parsed_class_path[:-1]), parsed_class_path[-1])
+		thisMod = importlib.import_module(module_name)
+		thisMapClass = getattr(thisMod, class_name)
+		thisMap = thisMapClass()
+		thisMap.initJSON(config)
+		thisMap.loadConfigJSON(config)
+		thisMap.isValid()
+		thisMap.initLogger()
+
+		return thisMap
+	
+	def getMapper(self):
+		return self.buildFromJSON(self.config)
 
 
 class MapperConfigurationException(Exception):

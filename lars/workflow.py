@@ -3,6 +3,7 @@ import sys
 import json
 import logging
 import sys
+import time
 
 import mapper 
 from outputter import * 
@@ -21,7 +22,7 @@ class Workflow(object):
 		self.mapperDict = {}
 		try:
 			for mapperConfig in wf['mappers']:
-				thisMap = mapper.buildFromJSON(mapperConfig)
+				thisMap = mapper.JSONMapperBuilder.buildFromJSON(mapperConfig)
 				mapperTup = (thisMap,[])
 				self.mappers.append(mapperTup)
 				self.mapperDict[thisMap.name] = mapperTup
@@ -53,12 +54,18 @@ class Workflow(object):
 		self.exceptOnMapperError = True
 			
 
-	def run(self,record):
+	def process(self,record):
+		start = time.time()
 		if self.mappers == None:
 			raise Exception("not built")
 		thisRec = record
+		end = time.time()
+		thisRec['TOTAL_TIME'] = ((end-start)*1000)
+
 		for mapper,outputters in self.mappers:
-			thisRec = mapper.run(thisRec)
+			self.logger.debug("Sending to %s" % mapper.name)
+			thisRec = mapper.processWrapper(thisRec,True,False)
+			self.logger.debug("Done with %s" % mapper.name)
 			for outputter in outputters:
 				outputter.output(thisRec)
 		return thisRec
@@ -77,7 +84,7 @@ if __name__ == "__main__":
 		#print wf.mappers
 	with open(records,'rb') as recordFH:
 		for line in recordFH:
-			res = wf.run(json.loads(line))
+			res = wf.process(json.loads(line))
 			recs.append(res)
 
 

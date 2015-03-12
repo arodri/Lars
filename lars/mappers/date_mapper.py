@@ -21,7 +21,7 @@ class ObsDateMapper(Mapper):
 			self.cache[s] = date
 			return date
 
-	def run(self,record):
+	def process(self,record):
 		if not self.skipRecord:
 			record[self.obsDateOutput] = self.parseDate(record[self.dateField])
 		if self.linksets != None:
