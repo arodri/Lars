@@ -85,7 +85,7 @@ class DumpOutputter(Outputter):
 			self.outFH = sys.stdout
 		else:
 			if instanceID != None:
-				outFile = "%s.%s" % (outFile. instanceID)
+				outFile = "%s.%s" % (outFile, instanceID)
 			self.outFH = open(outFile,'w')
 
 	def output(self,record):

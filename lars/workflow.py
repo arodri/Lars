@@ -63,15 +63,19 @@ class Workflow(object):
 		if self.mappers == None:
 			raise Exception("not built")
 		thisRec = record
-		end = time.time()
-		thisRec['TOTAL_TIME'] = ((end-start)*1000)
-
+		
+		start = time.time()
 		for mapper,outputters in self.mappers:
 			self.logger.debug("Sending to %s" % mapper.name)
 			thisRec = mapper.processWrapper(thisRec,True,False)
 			self.logger.debug("Done with %s" % mapper.name)
+
+			if i == len(self.mapeprs) - 1:
+				end = time.time()
+				thisRec['TOTAL_TIME'] = ((end-start)*1000)
 			for outputter in outputters:
 				outputter.output(thisRec)
+			i+=1
 		return thisRec
 
 

@@ -37,10 +37,10 @@ class PeriodicTask(object):
 
 class WorkflowWrapper:
 
-	def __init__(self, name, config):
+	def __init__(self, name, config, serviceID):
 		self.name = name
 		self._workflow = Workflow()
-		self._workflow.buildJSON(config)
+		self._workflow.buildJSON(config, instanceID="%s.%s" % (serviceID, name))
 
 		self.total_served = 0
 
@@ -109,8 +109,8 @@ class WorkflowManager:
 	def exists(self, name):
 		return name in self._workflows
 
-	def add(self, name, config):
-		self._workflows[name] = WorkflowWrapper(name,config)
+	def add(self, name, config, serviceID):
+		self._workflows[name] = WorkflowWrapper(name,config,serviceID)
 		
 	def remove(self, name):
 		if name in self._workflows:
@@ -129,8 +129,9 @@ class WorkflowManager:
 
 class WorkflowHandler(tornado.web.RequestHandler):
 	
-	def initialize(self, workflow_manager):
+	def initialize(self, workflow_manager, serviceID):
 		self.workflow_manager = workflow_manager
+		self.serviceID = serviceID
 
 	# get the workflow config
 	def get(self, name=None):
@@ -147,7 +148,7 @@ class WorkflowHandler(tornado.web.RequestHandler):
 		if not self.workflow_manager.exists(name):
 			try:
 				config = json.loads(self.request.body)
-				self.workflow_manager.add(name, config)
+				self.workflow_manager.add(name, config, self.serviceID)
 				self.set_status(201)
 			except ValueError:
 				self.send_error(400, reason="Unable to parse JSON workflow config")
@@ -182,12 +183,12 @@ class HTTPWorkflowServer(object):
 		
 		self.wf_manager = WorkflowManager()
 		if workflow != None:
-			self.wf_manager.add('default',workflow)
+			self.wf_manager.add('default',workflow,port)
 
 		self.app = Application([
 			url(r"/$", HeartBeatHandler),
-			url(r"/lars", WorkflowHandler, dict(workflow_manager=self.wf_manager)),
-			url(r"/lars/([a-zA-Z0-9]+)$", WorkflowHandler, dict(workflow_manager=self.wf_manager))
+			url(r"/lars", WorkflowHandler, dict(workflow_manager=self.wf_manager, serviceID=port)),
+			url(r"/lars/([a-zA-Z0-9]+)$", WorkflowHandler, dict(workflow_manager=self.wf_manager, serviceID=port))
 		])
 		self.app.listen(port)
 
