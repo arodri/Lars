@@ -145,6 +145,10 @@ class ParallelThreadMapper(mapper.Mapper):
 		for (tMapper,isDone) in self.mapper_defs:
 			tMapper.start()
 
+	def stop(self):
+		for tMapper,isDOne in self.mapper_defs:
+			tMapper.stop()
+
 	def process(self,record):
 		# need a shared-memory dictionary
 		self.shared_record.record = record

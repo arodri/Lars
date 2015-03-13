@@ -44,6 +44,9 @@ class Mapper:
 		if timing:
 			record["%s_TIMER" % self.name] = (end-start)*1000
 		return record
+	
+	def stop(self):
+		pass
 
 	def initLogger(self):
 		self.logger = logging.getLogger(self.name)

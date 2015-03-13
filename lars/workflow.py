@@ -54,6 +54,10 @@ class Workflow(object):
 		self.exceptOnMapperError = True
 			
 
+	def stop(self):
+		for (mapper,outputts) in self.mappers:
+			mapper.stop()
+
 	def process(self,record):
 		start = time.time()
 		if self.mappers == None:
