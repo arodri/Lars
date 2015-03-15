@@ -19,7 +19,8 @@ class Driver(object):
 		haproxy_stat_port, 
 		haproxy_var_port, var_ports,
 		loglevel,
-		input_file, delim, num_feeders):
+		input_file, delim, 
+		num_feeders, batch_size, queue_size):
 
 		self.haproxies = []
 		self.varnodes = []
@@ -37,6 +38,8 @@ class Driver(object):
 		self.input_file = input_file
 		self.delim = delim
 		self.num_feeders = num_feeders
+		self.batch_size = batch_size
+		self.queue_size = queue_size
 
 		self.logger = logging.getLogger('Driver')
 
@@ -77,22 +80,24 @@ class Driver(object):
 			sys.exit(exit_code)
 		return handler
 
-	def start_feeder(self, start_byte, end_byte):
-		log_file_str = "%s.%s_%s" % (os.path.basename(self.input_file), start_byte, end_byte)
+	def start_feeder(self):
+		log_file_str = "default"
 		with open('logs/feeder.%s.out' % log_file_str, 'ab') as out, open('logs/feeder.%s.err' % log_file_str, 'ab') as err:
 			cmd_str = """python lars/feeder.py
 				--var_uri=%(var_uri)s
 				--log=%(feeder_log)s
-				--level=%(loglevel)s
-				--start_byte=%(start_byte)s
-				--end_byte=%(end_byte)s
+				--loglevel=%(loglevel)s
+				--num_feeders=%(numfeeders)s
+				--queue_size=%(queuesize)s
+				--batch_size=%(batchsize)s
 				%(input_file)s %(delim)s""".replace('\n', ' ').replace('\t', '')
 			cmd_str = cmd_str % {
 				"var_uri":"http://localhost:%s/lars/default" % self.haproxy_var_port,
 				"feeder_log":"logs/feeder.%s.log" % log_file_str,
 				"loglevel":self.loglevel,
-				"start_byte":start_byte,
-				"end_byte":end_byte,
+				"numfeeders":self.num_feeders,
+				"batchsize":self.batch_size,
+				"queuesize":self.queue_size,
 				"input_file":self.input_file,
 				"delim":self.delim
 			}
@@ -112,11 +117,8 @@ class Driver(object):
 		return all(is_done)
 
 	def start_feeders(self):
-		with open(self.input_file,'r') as fin:
-			chunks = Feeder.getOffsets(fin, self.num_feeders)
-		for (start_byte, end_byte) in chunks:
-			feeder = self.start_feeder(start_byte, end_byte)
-			self.feeders.append(feeder)
+		feeder = self.start_feeder()
+		self.feeders.append(feeder)
 
 
 	def start_haproxy(self, haproxy_port, var_proxy_port, var_ports):
@@ -210,8 +212,10 @@ if __name__ == '__main__':
 	
 	group = parser.add_argument_group('Input data')
 	group.add_argument('--input_file', metavar='FILE', default=None, type=argparse.FileType('r'), help="Optional input file. (default: %(default)s")
-	group.add_argument('--delim', metavar='CHAR', default='|', help="Input file delimiter. (default: %(default)s")
-	group.add_argument('--num_feeders', metavar='NUM', default=1, type=int, help="Number if feeders to run")
+	group.add_argument('--delim', metavar='CHAR', default='|', help="Input file delimiter. Use 'JSON' for files with single-line json. (default: %(default)s")
+	group.add_argument('--num_feeders', metavar='NUM', default=1, type=int, help="Number if feeders to run (default: %(default)s")
+	group.add_argument('--batch_size', metavar='NUM', default=1, type=int, help="Batch size to process. (default: %(default)s")
+	group.add_argument('--queue_size', metavar='NUM', default=5000, type=int, help="Maximum queue size (#batches). (default: %(default)s")
 
 	group = parser.add_argument_group('Variable nodes')
 	group.add_argument('--var_start_port', metavar='PORT', default=9100, type=int, help='Starting HTTP port for variable nodes to listen on. (default: %(default)s)')
@@ -241,7 +245,9 @@ if __name__ == '__main__':
 		args['loglevel'],
 		args['input_file'],
 		args['delim'],
-		args['num_feeders']
+		args['num_feeders'],
+		args['batch_size'],
+		args['queue_size']
 	)
 
 	driver.start_all()

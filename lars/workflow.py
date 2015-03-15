@@ -65,12 +65,13 @@ class Workflow(object):
 		thisRec = record
 		
 		start = time.time()
+		i=0
 		for mapper,outputters in self.mappers:
 			self.logger.debug("Sending to %s" % mapper.name)
 			thisRec = mapper.processWrapper(thisRec,True,False)
 			self.logger.debug("Done with %s" % mapper.name)
 
-			if i == len(self.mapeprs) - 1:
+			if i == len(self.mappers) - 1:
 				end = time.time()
 				thisRec['TOTAL_TIME'] = ((end-start)*1000)
 			for outputter in outputters:
