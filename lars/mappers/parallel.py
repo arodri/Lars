@@ -88,12 +88,10 @@ class ThreadedMapper(threading.Thread):
 		return self._stop.isSet()
 
 	def run(self):
+        self.logger.debug("Waiting for record - first time")
+        self.recordReady.acquire()
+        self.recordReady.wait() # automatically releases
 		while not self.stopped():
-			# wait until the shared_record is ready
-			self.logger.debug("Waiting for record")
-			self.recordReady.acquire()
-			self.recordReady.wait()
-			self.recordReady.release()
 			self.logger.debug("Woo, record is ready!")
 			# make sure only X number of threads are running at a time
 			self.logger.debug("Waiting for semaphore")
@@ -108,9 +106,17 @@ class ThreadedMapper(threading.Thread):
 			self.semaphore.release()
 
 			# tell the parent that this thread is all done
+            # but first get the recordReady lock to avoid missing a new record
+            self.logger.debug("Acquiring recordReady lock")
+            self.recordReady.acquire()
+            
 			self.logger.debug("Notifying parent I'm done.")
 			self.isDone.set()
 			self.logger.debug("Parent notified.")
+            
+			# wait until the shared_record is ready
+			self.logger.debug("Waiting for record")
+			self.recordReady.wait()
 
 
 class ParallelThreadMapper(mapper.Mapper):
@@ -146,7 +152,7 @@ class ParallelThreadMapper(mapper.Mapper):
 			tMapper.start()
 
 	def stop(self):
-		for tMapper,isDOne in self.mapper_defs:
+		for tMapper,isDone in self.mapper_defs:
 			tMapper.stop()
 
 	def process(self,record):
@@ -157,7 +163,6 @@ class ParallelThreadMapper(mapper.Mapper):
 		self.logger.debug("Notifying threads the record is ready")
 		self.recordReady.acquire()
 		self.recordReady.notifyAll()
-		self.recordReady.release()
 		self.logger.debug("Threads notified")
 
 		# wait for the threads to be done
