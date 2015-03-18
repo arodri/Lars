@@ -31,7 +31,7 @@ class Feeder(mt.Process):
 			except Empty: # empty queue, try again
 				continue
 			self.logger.debug('Fetched %s records' % len(batch))
-			batch = [ (item, retries) for item in batch ] # add info for retries
+			batch = [ (item, 0) for item in batch ] # add info for retries
 			for (item,attempts) in batch:
 				j = item
 				if not self.isJson:
