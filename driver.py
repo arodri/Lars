@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import signal,sys
+import signal,sys,os
 from subprocess import Popen
 from multiprocessing import Pool
 import shlex
@@ -11,6 +11,7 @@ from jinja2 import Template
 from lars.feeder import Feeder
 import requests
 
+LARSDIR=os.path.dirname(os.path.realpath(__file__))
 
 class Driver(object):
 
@@ -83,7 +84,7 @@ class Driver(object):
 	def start_feeder(self):
 		log_file_str = "default"
 		with open('logs/feeder.%s.out' % log_file_str, 'ab') as out, open('logs/feeder.%s.err' % log_file_str, 'ab') as err:
-			cmd_str = """python lars/feeder.py
+			cmd_str = """python %(LARSDIR)s/lars/feeder.py
 				--var_uri=%(var_uri)s
 				--log=%(feeder_log)s
 				--loglevel=%(loglevel)s
@@ -92,6 +93,7 @@ class Driver(object):
 				--batch_size=%(batchsize)s
 				%(input_file)s %(delim)s""".replace('\n', ' ').replace('\t', '')
 			cmd_str = cmd_str % {
+				"LARSDIR":LARSDIR,
 				"var_uri":"http://localhost:%s/lars/default" % self.haproxy_var_port,
 				"feeder_log":"logs/feeder.%s.log" % log_file_str,
 				"loglevel":self.loglevel,
@@ -123,7 +125,7 @@ class Driver(object):
 
 	def start_haproxy(self, haproxy_port, var_proxy_port, var_ports):
 		var_nodes = zip(["var%s" % port for port in var_ports ], var_ports)
-		with open('config/haproxy.jinja2.cfg', 'r') as cfg_template:
+		with open('%s/config/haproxy.jinja2.cfg' % LARSDIR, 'r') as cfg_template:
 			with open('logs/haproxy.cfg', 'w') as cfg:
 				template = Template(cfg_template.read())
 				cfg.write(template.render(stats_port=haproxy_port, var_proxy_port=var_proxy_port, var_nodes=var_nodes))
@@ -135,12 +137,13 @@ class Driver(object):
 	
 	def start_varnode(self, port, loglevel, workflow_config):
 		with open('logs/http.node.%s.out' % port, 'ab') as out, open('logs/http.node.%s.err' % port, 'ab') as err:
-			cmd_str = ("""python lars/http_node.py 
+			cmd_str = ("""python %(LARSDIR)s/lars/http_node.py 
 				--http_port=%(port)s 
 				--log=logs/http.node.%(port)s.log 
 				--loglevel=%(loglevel)s
 				--default_workflow=%(workflow)s""").replace('\n', ' ').replace('\t','')
 			cmd_str = cmd_str % {
+				'LARSDIR':LARSDIR,
 				'port':port, 
 				'loglevel':loglevel,
 				'workflow':workflow_config
@@ -148,6 +151,7 @@ class Driver(object):
 			self.logger.debug(cmd_str)
 			cmd = shlex.split(cmd_str)
 			return Popen(cmd, stdout=out, stderr=err)
+			
 
 	def run_loop(self):
 		self.logger.debug("Entering run loop")
@@ -249,6 +253,11 @@ if __name__ == '__main__':
 		args['batch_size'],
 		args['queue_size']
 	)
+
+	if not os.path.exists('logs'):
+		os.makedirs('logs')
+	if not os.path.exists('output'):
+		os.makedirs('output')
 
 	driver.start_all()
 	
