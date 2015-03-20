@@ -91,7 +91,6 @@ class Driver(object):
 				--num_feeders=%(numfeeders)s
 				--queue_size=%(queuesize)s
 				--batch_size=%(batchsize)s
-				--delim=%(delim)s
 				%(input_file)s %(delim)s""".replace('\n', ' ').replace('\t', '')
 			cmd_str = cmd_str % {
 				"LARSDIR":LARSDIR,
