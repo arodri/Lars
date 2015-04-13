@@ -29,7 +29,8 @@ class DatedCrosstabMapper(Mapper):
 		for (lsName,ls) in [ (rlName, record[rlName]) for rlName in self.recordLists ]:
 			durLS = {}
 			for dur in self.durs:
-				thisSets = copy.deepcopy(self.setFields)
+				#thisSets = copy.deepcopy(self.setFields)
+				thisSets = dict([(field,set()) for field in self.diffFields])
 				thisLS = [rec for rec in ls if rec[self.recordListObsDate] > cutOffDates[dur]]
 				for rec in thisLS:
 					for field in self.diffFields:
@@ -70,7 +71,8 @@ class DatedBinaryMapper(Mapper):
 		for (lsName,ls) in [ (rlName, record[rlName]) for rlName in self.recordLists ]:
 			durLS = {}
 			for dur in self.durs:
-				binary_fields = copy.deepcopy(self.fieldCounts)
+				#binary_fields = copy.deepcopy(self.fieldCounts)
+				binary_fields = dict([(field,{'1':0,'0':0}) for field in self.binaryFields])
 				thisLS = [rec for rec in ls if rec[self.recordListObsDate]>cutOffDates[dur]]
 				for rec in thisLS:
 					for field in self.binaryFields:
