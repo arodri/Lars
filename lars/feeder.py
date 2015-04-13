@@ -10,8 +10,41 @@ import csv
 import time
 
 import multiprocessing as mt
-from http_node import PeriodicTask
+#from http_node import PeriodicTask
 from Queue import Empty
+
+class FileReader():
+	def __init__(self, input_file, delim):
+		self._input_file = input_file
+		if delim in ['JSON','json','Json']:
+			self.is_json = True
+			self._reader = self._input_file
+		else:
+			self.is_json = False
+			self._reader = csv.DictReader(input_file, delimiter=delim)
+
+	def __iter__(self):
+		return self
+
+	def next(self):
+		r = self._reader.next()
+		j = {}
+		if self.is_json:
+			j = json.loads(r)
+		else:
+			j = r
+		return j
+
+	def __next__(self):
+		return self.next()
+
+	def close(self):
+		self._input_file.close()
+
+	def __exit__(self):
+		self.close()
+
+
 class Feeder(mt.Process):
 	def __init__(self, q, uri, isDone, id, inputIsJsonStr,):
 		super(Feeder, self).__init__()
@@ -65,8 +98,8 @@ def run_feeders(input_file, delim, uri, num_feeders, batch_size, queue_size, inp
 	q = mt.Queue(queue_size)
 	
 	# start queue size logger
-	p = PeriodicTask(5, report_qsize, q=q, logger=logger)
-	p.run()
+	#p = PeriodicTask(5, report_qsize, q=q, logger=logger)
+	#p.run()
 
 	# start up feeders
 	logger.info('Starting feeders')

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import argparse, sys, time
 import logging, os
 import json
