@@ -43,8 +43,8 @@ class Feeder(mt.Process):
 					end = time.time()
 					self.logger.info('RecordRequest - %s - [%s]' % (resp.status_code, (end-start)*1000))
 
-				except request.exceptions.Timeout,e:
-					logger.warning("RequestTimeout exceded. Retry %s of 3" % attempts)
+				except requests.exceptions.Timeout,e:
+					self.logger.warning("RequestTimeout exceded. Retry %s of 3" % attempts)
 					attempts += 1
 					if attempts < 3:
 						batch.append((item,attempts))
