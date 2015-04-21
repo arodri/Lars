@@ -1,10 +1,13 @@
+#!/usr/bin/env python
 import importlib
 import sys
 import json
 import logging
 import sys
 import time
+import argparse
 
+from feeder import FileReader
 import mapper 
 from outputter import * 
 #todo- make class vars instead of strings
@@ -83,17 +86,24 @@ class Workflow(object):
 
 
 if __name__ == "__main__":
+
+	parser = argparse.ArgumentParser(description='Simple single-threaded interface for running a workflow')
+
+	parser.add_argument('input_file', nargs=1, type=argparse.FileType('r'), help='Input file. Either delimited with a header OR 1-JSON-per-line')
+	parser.add_argument('workflow', nargs=1, type=argparse.FileType('r'), help='Workflow JSON configuration.')
+	parser.add_argument('-d', default='|', metavar='DELIM', help='Input file delimiter. If the file is already JSON format (one line per record) specify "JSON". (default: %(default)s)')
+
+	args = parser.parse_args()
+
 	logging.basicConfig(level=logging.DEBUG)
-        recs = []
-	wfJSON = sys.argv[1]
-	records = sys.argv[2]
+	
 	wf = Workflow()
-	with open(wfJSON,'rb') as wfFH:
+	with args.workflow[0] as wfFH:
 		wf.buildJSON(json.load(wfFH))
-		#print wf.mappers
-	with open(records,'rb') as recordFH:
-		for line in recordFH:
-			res = wf.process(json.loads(line))
-			recs.append(res)
+
+	with args.input_file[0] as recordFH:
+		reader = FileReader(recordFH, args.d)
+		for r in reader:
+			logging.debug(wf.process(r))
 
 
