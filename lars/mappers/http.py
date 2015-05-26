@@ -71,6 +71,9 @@ class JSONRequest(HTTPRequest):
 		record[self.output_key] = resp.json()
 		return record
 
+	def makeRequestData(record):
+		return record
+
 
 class MelissaRequest(JSONRequest):
 
