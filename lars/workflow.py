@@ -71,7 +71,7 @@ class Workflow(object):
 		i=0
 		for mapper,outputters in self.mappers:
 			self.logger.debug("Sending to %s" % mapper.name)
-			thisRec = mapper.processWrapper(thisRec,True,False)
+			thisRec = mapper.processWrapper(thisRec,True,self.exceptOnMapperError)
 			self.logger.debug("Done with %s" % mapper.name)
 
 			if i == len(self.mappers) - 1:
