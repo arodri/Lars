@@ -167,9 +167,9 @@ class WorkflowHandler(tornado.web.RequestHandler):
 		if self.workflow_manager.exists(name):
 			try:
 				record = json.loads(self.request.body)
+				self.write(json.dumps(self.workflow_manager.process(name, record), default=JSONDefault))
 			except ValueError:
 				self.send_error(400, reason="Unable to parse JSON record")
-			self.write(json.dumps(self.workflow_manager.process(name, record), default=JSONDefault))
 		else:
 			self.send_error(400, reason="Workflow '%s' does not exist" % name)
 
