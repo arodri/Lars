@@ -25,11 +25,14 @@ class Workflow(object):
 		self.mapperDict = {}
 		try:
 			for mapperConfig in wf['mappers']:
-				thisMap = mapper.JSONMapperBuilder.buildFromJSON(mapperConfig)
-				mapperTup = (thisMap,[])
-				self.mappers.append(mapperTup)
-				self.mapperDict[thisMap.name] = mapperTup
-				self.logger.info("Parsed %s" % thisMap.name)
+				thisMap,skip = mapper.JSONMapperBuilder.buildFromJSON(mapperConfig)
+				if skip:
+					self.logger.info("skipping %s" % thisMap.name)
+				else:
+					mapperTup = (thisMap,[])
+					self.mappers.append(mapperTup)
+					self.mapperDict[thisMap.name] = mapperTup
+					self.logger.info("Parsed %s" % thisMap.name)
 			for outConfig in wf['outputters']:
 				#default outputter is delimited outputter
 				thisOutClass = DelimitedOutputter
