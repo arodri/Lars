@@ -67,6 +67,11 @@ class JSONRequest(HTTPRequest):
 	def process(self,record):
 		j = self.makeRequestData(record)
 		resp = self.getResponse(json.dumps(j))
+		if resp.status_code != 200:
+			self.logger.error("http_code: %s" % resp.status_code)
+			self.logger.error(resp.text)
+			if resp.status_code >= 400:
+				raise requests.exceptions.HTTPError("HTTP_CODE: %s; %s" % (resp.status_code, resp.text))
 		record[self.response_code_key] = resp.status_code
 		record[self.output_key] = resp.json()
 		return record
