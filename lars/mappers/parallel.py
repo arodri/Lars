@@ -31,18 +31,21 @@ class ParallelProcessMapper(mapper.Mapper):
 		self.logger.info("Parsing parallel config")
 		for map_config in self.mapper_configs:
 			# create the mapper
-			thisMapper = mapper.JSONMapperBuilder.buildFromJSON(map_config)
-			thisMapper.verifyParallizable()
+			thisMapper,skip = mapper.JSONMapperBuilder.buildFromJSON(map_config)
+			if skip:
+				self.logger.warning("Skipped mapper: %s" % thisMapper.name)
+			else:
+				thisMapper.verifyParallizable()
 
-			# check to see that there are no conflicts in provides
-			thisProvides = set(thisMapper.provides)
-			intersect = self.mapper_provides.intersection(thisProvides)
-			if len(intersect) > 0:
-				raise mapper.MapperConfigurationException("%s can not be parallelized in this context, conflict in fields being written to: %s" % (thisMapper.name, ",".join([ str(f) for f in intersect ])))
-			self.mapper_provides.update(thisProvides)
-
-			self.logger.info("Built %s" % thisMapper.name)
-			self.mapper_defs.append(thisMapper)
+				# check to see that there are no conflicts in provides
+				thisProvides = set(thisMapper.provides)
+				intersect = self.mapper_provides.intersection(thisProvides)
+				if len(intersect) > 0:
+					raise mapper.MapperConfigurationException("%s can not be parallelized in this context, conflict in fields being written to: %s" % (thisMapper.name, ",".join([ str(f) for f in intersect ])))
+				self.mapper_provides.update(thisProvides)
+	
+				self.logger.info("Built %s" % thisMapper.name)
+				self.mapper_defs.append(thisMapper)
 		
 		self.manager = mt.Manager()
 		self.pool = ThreadPool(self.pool_size)
@@ -71,7 +74,7 @@ class ThreadedMapper(threading.Thread):
 
 		self._stop = threading.Event()
 
-		self.mapper = mapperBuilder.getMapper()
+		(self.mapper, self.skip) = mapperBuilder.getMapper()
 		self.logger = logging.getLogger(self.mapper.name)
 
 		super(ThreadedMapper, self).__init__(name=self.mapper.name)
@@ -138,16 +141,19 @@ class ParallelThreadMapper(mapper.Mapper):
 			# create the mapper
 			builder = mapper.JSONMapperBuilder(map_config)
 			thisMapper = ThreadedMapper(thread_pool, self.recordReady, self.shared_record, builder)
+			if thisMapper.skip:
+				self.logger.warning("Skipping %s" % thisMapper.name)
+			else:
 			
-			# check to see that there are no conflicts in provides
-			thisProvides = set(thisMapper.getProvides())
-			intersect = self.mapper_provides.intersection(thisProvides)
-			if len(intersect) > 0:
-				raise mapper.MapperConfigurationException("%s can not be parallelized in this context, conflict in fields being written to: %s" % (thisMapper.name, ",".join([ str(f) for f in intersect ])))
-			self.mapper_provides.update(thisProvides)
-
-			self.logger.info("Built %s" % thisMapper.name)
-			self.mapper_defs.append((thisMapper,thisMapper.isDone))
+				# check to see that there are no conflicts in provides
+				thisProvides = set(thisMapper.getProvides())
+				intersect = self.mapper_provides.intersection(thisProvides)
+				if len(intersect) > 0:
+					raise mapper.MapperConfigurationException("%s can not be parallelized in this context, conflict in fields being written to: %s" % (thisMapper.name, ",".join([ str(f) for f in intersect ])))
+				self.mapper_provides.update(thisProvides)
+	
+				self.logger.info("Built %s" % thisMapper.name)
+				self.mapper_defs.append((thisMapper,thisMapper.isDone))
 		for (tMapper,isDone) in self.mapper_defs:
 			tMapper.start()
 
