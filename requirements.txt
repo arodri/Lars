@@ -4,3 +4,4 @@ mysql-python
 jinja2
 tornado
 argparse
+ujson

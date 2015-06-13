@@ -44,7 +44,7 @@ class DelimitedOutputter(Outputter):
 			fieldNames = [field for field in config[DelimitedOutputter._FIELD_NAMES]]
 		else:
 			raise OutputterConfigurationException("Needs to have either"+_FMTFILE + "or " +_FIELD_NAMES)
-		self.fields = [field.split(".") for field in fieldNames]
+		self.fields = [field.split(">>") for field in fieldNames]
 		#check for delim
 		self.delim = config.get(DelimitedOutputter._DELIM,DelimitedOutputter._DEF_DELIM)
 		#check for output file
@@ -68,7 +68,7 @@ class DelimitedOutputter(Outputter):
 				try:
 					val = val[part]
 				except KeyError:
-					dotNote = ".".join(field)
+					dotNote = ">>".join(field)
 					raise KeyError("Unable to find field "+part+ " in "+ dotNote)
 			res.append(str(val))
 		self.outFH.write(self.delim.join(res)+"\n")
