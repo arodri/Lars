@@ -31,6 +31,7 @@ class Mapper:
 			self.requires = config["requires"]
 		except KeyError:
 			pass
+		self.skip = config.get("skip",False)
 
 	def processWrapper(self, record, timing=True, error=True):
 		start = time.time()
@@ -69,6 +70,7 @@ class JSONMapperBuilder(MapperBuilder):
 	def __init__(self, json_config):
 		self.config = json_config
 
+
 	@staticmethod
 	def buildFromJSON(config):
 		parsed_class_path = config["class"].split(".")
@@ -77,11 +79,14 @@ class JSONMapperBuilder(MapperBuilder):
 		thisMapClass = getattr(thisMod, class_name)
 		thisMap = thisMapClass()
 		thisMap.initJSON(config)
-		thisMap.loadConfigJSON(config)
-		thisMap.isValid()
-		thisMap.initLogger()
-
-		return thisMap
+		skip = thisMap.skip
+		if not skip:
+			thisMap.loadConfigJSON(config)
+			thisMap.isValid()
+			thisMap.initLogger()
+	#	else:
+	#		thisMap = None
+		return (thisMap,skip)
 	
 	def getMapper(self):
 		return self.buildFromJSON(self.config)
