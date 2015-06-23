@@ -9,8 +9,10 @@ import argparse
 
 from feeder import FileReader
 import mapper 
-from outputter import * 
+from outputter import *
+from record import record
 #todo- make class vars instead of strings
+#TODO: Name the workflows so that you can auto assign record_ids in a multi-threaded environment
 
 class Workflow(object):
 	
@@ -18,9 +20,12 @@ class Workflow(object):
 		self.logger = logging.getLogger('workflow')
 		self.timing = False
 		self.exceptOnMapperError = True
+		self.numProc = 0
 
 	def buildJSON(self, config,instanceID=None):
 		wf= config['workflow']
+		self.getRecordIDField = wf.get("get_recordID_field",None)
+		self.putRecordIDField = wf.get("put_recordID_field",None)
 		self.mappers = []
 		self.mapperDict = {}
 		try:
@@ -64,14 +69,27 @@ class Workflow(object):
 		for (mapper,outputts) in self.mappers:
 			mapper.stop()
 
-	def process(self,record):
+	def process(self,recordDict):
+		thisRec = record(recordDict)
+		#if a record_id is provided in the original dict use that, else use the 
+		#number of records that have been processed thus far
+		if self.getRecordIDField:
+			try:
+				thisRec.set_record_id(thisRec[self.getRecordIDField])
+			except KeyError:
+				raise KeyError("recordID cannot be assigned, %s not present in input" % self.getRecordIDField) 
+		else:
+			thisRec.set_record_id(self.numProc)
+		#assign the record_id to a field in the underlying dict if requested
+		if self.putRecordIDField:
+			thisRec[self.putRecordIDField] = thisRec.get_record_id()
 		start = time.time()
 		if self.mappers == None:
 			raise Exception("not built")
-		thisRec = record
 		
 		start = time.time()
 		i=0
+		#run through all the mappers and outputters
 		for mapper,outputters in self.mappers:
 			self.logger.debug("Sending to %s" % mapper.name)
 			thisRec = mapper.processWrapper(thisRec,True,self.exceptOnMapperError)
@@ -83,6 +101,8 @@ class Workflow(object):
 			for outputter in outputters:
 				outputter.output(thisRec)
 			i+=1
+		#increment the processed records
+		self.numProc+=1
 		return thisRec
 
 
