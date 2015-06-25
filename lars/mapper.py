@@ -1,6 +1,7 @@
 import logging
 import time
 import importlib
+import socket
 
 class Mapper:
 
@@ -35,6 +36,8 @@ class Mapper:
 
 	def processWrapper(self, record, timing=True, error=True):
 		start = time.time()
+		self.context["record"] = record
+		self.context["record_id"] = record.get_record_id()
 		try:
 			record = self.process(record)
 		except Exception, e:
@@ -50,7 +53,19 @@ class Mapper:
 		pass
 
 	def initLogger(self):
-		self.logger = logging.getLogger(self.name)
+		logger = logging.getLogger(self.name)
+		#logger.propagate = False
+		self.context = {"hostname":socket.gethostname(),"record_id":None,"record":None}
+		#handlers = logger.handlers
+		#if len(handlers)==0:
+		#	handler = logging.StreamHandler()
+		#	handlers.append(handler)
+		#	logger.addHandler(handler)
+		#for handler in handlers:
+		#	formatter = logging.Formatter("@%(hostname)s (ID=%(record_id)s): %(message)s")
+		#	handler.setFormatter(formatter)
+		self.logger = MapperLoggerAdapter(logger,self.context)
+
 
 	def verifyParallizable(self):
 		try:
@@ -94,3 +109,9 @@ class JSONMapperBuilder(MapperBuilder):
 
 class MapperConfigurationException(Exception):
 	pass
+
+class  MapperLoggerAdapter(logging.LoggerAdapter):
+	
+	def process(self,msg,kwargs):
+		return "@%s (id=%s): %s" % (self.extra["hostname"],self.extra["record_id"],msg), kwargs
+
