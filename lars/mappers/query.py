@@ -15,11 +15,19 @@ class SQLMapper(mapper.Mapper):
 		self.queryString = config.get("queryString", None)
 		self.queryFile = config.get("queryFile", None)
 		self.parameters = config.get("parameters", [])
+		self.__setSkipValues(config.get("skip_values",{}))
 		logging.debug(config)
 		if not (self.queryString == None) ^ (self.queryFile == None):
 			raise mapper.MapperConfigurationException("%s: must configure 'queryFile' XOR 'queryString'" % self.name)
 
 		self.__initalize()
+
+	def __setSkipValues(self, skip_values):
+		self.skip_values = {}
+		for sv in skip_values:
+			param = sv["parameter"]
+			values = set(sv["values"])
+			self.skip_values[param] = values
 
 	def __initalize(self):
 		self.outputKeyTiming = self.outputKey+"_QUERY_TIME"
@@ -44,8 +52,14 @@ class SQLMapper(mapper.Mapper):
 			self.__cnx_pool = sqlalchemy.create_engine(self.engineUrl)
 
 	def process(self,record):
-		
-		params = dict([ (param, record[param]) for param in self.parameters ])
+		params = {}
+		for param in self.parameters:
+			if param in self.skip_values and record[param] in self.skip_values[param]:
+				record[self.outputKey] = []
+				record[self.outputKeyTiming] = -1
+				return record
+			else:
+				params[param] = record[param]
 
 		qStart = time.time()
 		self.logger.debug("Staring query")
