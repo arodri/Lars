@@ -1,7 +1,7 @@
 import logging
+import loggingAdapters
 import time
 import importlib
-import socket
 
 class Mapper:
 
@@ -34,10 +34,11 @@ class Mapper:
 			pass
 		self.skip = config.get("skip",False)
 
-	def processWrapper(self, record, timing=True, error=True):
+	def processWrapper(self, record, context, timing=True, error=True):
 		start = time.time()
-		self.context["record"] = record
-		self.context["record_id"] = record.get_record_id()
+		self.logger.setContext(context)
+		#self.context["record"] = record
+		#self.context["record_id"] = record.get_record_id()
 		try:
 			record = self.process(record)
 		except Exception, e:
@@ -54,17 +55,7 @@ class Mapper:
 
 	def initLogger(self):
 		logger = logging.getLogger(self.name)
-		#logger.propagate = False
-		self.context = {"hostname":socket.gethostname(),"record_id":None,"record":None}
-		#handlers = logger.handlers
-		#if len(handlers)==0:
-		#	handler = logging.StreamHandler()
-		#	handlers.append(handler)
-		#	logger.addHandler(handler)
-		#for handler in handlers:
-		#	formatter = logging.Formatter("@%(hostname)s (ID=%(record_id)s): %(message)s")
-		#	handler.setFormatter(formatter)
-		self.logger = MapperLoggerAdapter(logger,self.context)
+		self.logger = loggingAdapters.WorkflowLoggerAdapter(logger,None)
 
 
 	def verifyParallizable(self):
@@ -110,8 +101,5 @@ class JSONMapperBuilder(MapperBuilder):
 class MapperConfigurationException(Exception):
 	pass
 
-class  MapperLoggerAdapter(logging.LoggerAdapter):
-	
-	def process(self,msg,kwargs):
-		return "@%s (id=%s): %s" % (self.extra["hostname"],self.extra["record_id"],msg), kwargs
+
 
