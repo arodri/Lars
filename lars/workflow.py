@@ -88,8 +88,8 @@ class Workflow(object):
 		if self.putRecordIDField:
 			thisRec[self.putRecordIDField] = thisRec.get_record_id()
 		#change the context for logging 
-		self.context["record"] = thisRec
 		self.context["record_id"] = thisRec.get_record_id()
+		thisRec.set_context(self.context)
 		start = time.time()
 		if self.mappers == None:
 			raise Exception("not built")
@@ -99,7 +99,7 @@ class Workflow(object):
 		#run through all the mappers and outputters
 		for mapper,outputters in self.mappers:
 			self.logger.debug("Sending to %s" % mapper.name)
-			thisRec = mapper.processWrapper(thisRec,self.context,True,self.exceptOnMapperError)
+			thisRec = mapper.processWrapper(thisRec,True,self.exceptOnMapperError)
 			self.logger.debug("Done with %s" % mapper.name)
 
 			if i == len(self.mappers) - 1:

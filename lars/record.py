@@ -9,3 +9,9 @@ class record(dict):
 
 	def get_record_id(self):
 		return self.record_id
+
+	def set_context(self,context):
+		self.context = context
+	
+	def get_context(self):
+		return self.context

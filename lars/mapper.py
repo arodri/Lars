@@ -34,9 +34,9 @@ class Mapper:
 			pass
 		self.skip = config.get("skip",False)
 
-	def processWrapper(self, record, context, timing=True, error=True):
+	def processWrapper(self, record, timing=True, error=True):
 		start = time.time()
-		self.logger.setContext(context)
+		self.logger.setContext(record.context)
 		#self.context["record"] = record
 		#self.context["record_id"] = record.get_record_id()
 		try:
