@@ -55,7 +55,7 @@ class SQLMapper(mapper.Mapper):
 		params = {}
 		for param in self.parameters:
 			if param in self.skip_values and record[param] in self.skip_values[param]:
-				record[self.outputKey] = []
+				record[self.outputKey] = None
 				record[self.outputKeyTiming] = -1
 				return record
 			else:

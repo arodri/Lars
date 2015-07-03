@@ -13,6 +13,7 @@ class DatedCrosstabMapper(Mapper):
 		self.recordLists = config['recordLists']
 		self.recordObsDate = config['obsDatetimeField']
 		self.recordListObsDate = config['recordListDatetimeField']
+		self.missingValue = config.get('missingValue',-1)
 
 		self.provides = []
 		for dur in self.durs:
@@ -29,15 +30,15 @@ class DatedCrosstabMapper(Mapper):
 		for (lsName,ls) in [ (rlName, record[rlName]) for rlName in self.recordLists ]:
 			durLS = {}
 			for dur in self.durs:
-				#thisSets = copy.deepcopy(self.setFields)
 				thisSets = dict([(field,set()) for field in self.diffFields])
-				thisLS = [rec for rec in ls if rec[self.recordListObsDate] > cutOffDates[dur]]
-				for rec in thisLS:
-					for field in self.diffFields:
-						thisSets[field].add(rec[field])
+				if ls != None:
+					thisLS = [rec for rec in ls if rec[self.recordListObsDate] > cutOffDates[dur]]
+					for rec in thisLS:
+						for field in self.diffFields:
+							thisSets[field].add(rec[field])
 				for field in self.diffFields:
-					record[lsName+"_"+str(dur)+"_diff_"+field] = len(thisSets[field])
-				record[lsName+"_"+str(dur)+"_cnt"] = len(thisLS)
+					record[lsName+"_"+str(dur)+"_diff_"+field] = self.missingValue if ls == None else len(thisSets[field])
+				record[lsName+"_"+str(dur)+"_cnt"] = self.missingValue if ls == None else len(thisLS)
 		return record
 
 class DatedBinaryMapper(Mapper):
@@ -54,6 +55,7 @@ class DatedBinaryMapper(Mapper):
 		self.recordObsDate = config['obsDatetimeField']
 		self.recordListObsDate = config['recordListDatetimeField']
 		self.fieldCounts = dict([(field,{'1':0,'0':0}) for field in self.binaryFields])
+		self.missingValue = config.get('missingValue',-1)
 
 		self.provides = []
 		for dur in self.durs:
@@ -71,23 +73,23 @@ class DatedBinaryMapper(Mapper):
 		for (lsName,ls) in [ (rlName, record[rlName]) for rlName in self.recordLists ]:
 			durLS = {}
 			for dur in self.durs:
-				#binary_fields = copy.deepcopy(self.fieldCounts)
 				binary_fields = dict([(field,{'1':0,'0':0}) for field in self.binaryFields])
-				thisLS = [rec for rec in ls if rec[self.recordListObsDate]>cutOffDates[dur]]
-				for rec in thisLS:
-					for field in self.binaryFields:
-						v = rec[field]
-						if v not in self.empty:
-							if v in self.hit:
-								binary_fields[field]["1"] += 1
-							elif v in self.miss:
-								binary_fields[field]["0"] += 1
+				if ls != None:
+					thisLS = [rec for rec in ls if rec[self.recordListObsDate]>cutOffDates[dur]]
+					for rec in thisLS:
+						for field in self.binaryFields:
+							v = rec[field]
+							if v not in self.empty:
+								if v in self.hit:
+									binary_fields[field]["1"] += 1
+								elif v in self.miss:
+									binary_fields[field]["0"] += 1
 				for field in self.binaryFields:
 					key = "%s_%s_%s" % (lsName, dur, field)
 
 					hits = binary_fields[field]["1"]
 					misses = binary_fields[field]["0"]
 					rate = -1.0 if hits+misses == 0 else hits/float(hits+misses)
-					record["%s_rate" % key] = rate
-					record["%s_cnt" % key] = hits
+					record["%s_rate" % key] = self.missingValue if ls == None else rate
+					record["%s_cnt" % key] = self.missingValue if ls == None else hits
 		return record

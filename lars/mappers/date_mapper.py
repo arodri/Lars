@@ -26,8 +26,9 @@ class ObsDateMapper(Mapper):
 			record[self.obsDateOutput] = self.parseDate(record[self.dateField])
 		if self.linksets != None:
 			for lsName,ls in record[self.linksets].items():
-				for rec in ls:
-					rec[self.obsDateOutput] = self.parseDate(rec[self.dateField])
+				if ls != None:
+					for rec in ls:
+						rec[self.obsDateOutput] = self.parseDate(rec[self.dateField])
 		return record
 			
 			
