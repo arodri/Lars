@@ -1,6 +1,7 @@
 import mapper
 import time
 import logging
+import math
 import sqlalchemy
 from sqlalchemy.pool import QueuePool
 
@@ -15,6 +16,8 @@ class SQLMapper(mapper.Mapper):
 		self.queryString = config.get("queryString", None)
 		self.queryFile = config.get("queryFile", None)
 		self.parameters = config.get("parameters", [])
+		self.batched_parameter = config.get("batched_parameter", None)
+		self.batch_size = float(config.get("batch_size",10))
 		self.__setSkipValues(config.get("skip_values",{}))
 		logging.debug(config)
 		if not (self.queryString == None) ^ (self.queryFile == None):
@@ -43,7 +46,10 @@ class SQLMapper(mapper.Mapper):
 			with open(self.queryFile,'r') as qf:
 				self.queryString = qf.read()
 		self.logger.info("Testing query string subsitutions")
-		self.queryString % dict(zip(self.parameters,self.parameters))
+		p_dict = dict(zip(self.parameters,self.parameters))
+		if self.batched_parameter != None:
+			p_dict[self.batched_parameter] = self.batched_parameter
+		self.queryString % p_dict
 
 		self.logger.info("Opening connections")
 		if 'sqlite' not in self.engineUrl:
@@ -53,27 +59,49 @@ class SQLMapper(mapper.Mapper):
 
 	def process(self,record):
 		params = {}
+		results = []
+		q_time = 0
+		record[self.outputKey] = None
+		record[self.outputKeyTiming] = -1
+		# check for empty parameter values
 		for param in self.parameters:
 			if param in self.skip_values and record[param] in self.skip_values[param]:
-				record[self.outputKey] = None
-				record[self.outputKeyTiming] = -1
 				return record
 			else:
 				params[param] = record[param]
 
-		qStart = time.time()
-		self.logger.debug("Staring query")
-		results = self.__cnx_pool.execute(self.queryString, params)
-		self.logger.debug("Query returned")
-		qEnd = time.time()
-		self.logger.debug("Fetching results")
-		resultData = results.fetchall()
-		self.logger.debug("Results fetched")
-		record[self.outputKey] = [ dict(zip(r.keys(), r.values())) for r in resultData ]
-		record[self.outputKeyTiming] = "%0.2f" % ((qEnd-qStart)*1000)
+		if self.batched_parameter == None:
+			(r,dur) = self.__exec_query(params,0)
+			q_time += dur
+			results += r
+		else:
+			values = filter(lambda v: not (self.batched_parameter not in self.skip_values and v in self.skip_values[self.batched_parameter]), record[self.batched_parameter])
+			self.logger.debug(values)
+			if len(values) == 0:
+				return record
+			num_batches = math.ceil(len(values)/self.batch_size)
+			this_batch_size = int(math.ceil(len(values)/num_batches))
+			for i in range(int(num_batches)):
+				lower = i*this_batch_size
+				upper = (i+1)*this_batch_size
+				params[self.batched_parameter] = values[lower:upper]
+				(r,dur) = self.__exec_query(params,i)
+				q_time += dur
+				results += r
+		record[self.outputKey] = results
+		record[self.outputKeyTiming] = q_time
 
 		return record
-			
-			
+		
+	def __exec_query(self,params,batch_id):
+		qStart = time.time()
+		self.logger.debug("- %s - Staring query" % batch_id)
+		results = self.__cnx_pool.execute(self.queryString, params)
+		self.logger.debug("- %s - Query returned" % batch_id)
+		qEnd = time.time()
+		self.logger.debug("- %s - Fetching results" % batch_id)
+		resultData = results.fetchall()
+		self.logger.debug("- %s - Results fetched" % batch_id)
+		return [ dict(zip(r.keys(), r.values())) for r in resultData ], (qEnd-qStart)*1000
 
 
