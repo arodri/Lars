@@ -81,6 +81,7 @@ class SQLMapper(mapper.Mapper):
 				return record
 			num_batches = math.ceil(len(values)/self.batch_size)
 			this_batch_size = int(math.ceil(len(values)/num_batches))
+			self.logger.debug("Querying %s elements in %s batches of %s records" % (len(values), int(num_batches), this_batch_size))
 			for i in range(int(num_batches)):
 				lower = i*this_batch_size
 				upper = (i+1)*this_batch_size
@@ -99,9 +100,10 @@ class SQLMapper(mapper.Mapper):
 		results = self.__cnx_pool.execute(self.queryString, params)
 		self.logger.debug("- %s - Query returned" % batch_id)
 		qEnd = time.time()
+		dur = (qEnd-qStart)*1000
 		self.logger.debug("- %s - Fetching results" % batch_id)
 		resultData = results.fetchall()
-		self.logger.debug("- %s - Results fetched" % batch_id)
-		return [ dict(zip(r.keys(), r.values())) for r in resultData ], (qEnd-qStart)*1000
+		self.logger.debug("- %s - Results fetched - %0.2f ms" % (batch_id,dur))
+		return [ dict(zip(r.keys(), r.values())) for r in resultData ], dur
 
 
