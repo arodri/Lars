@@ -1,7 +1,7 @@
-import logging
-import loggingAdapters
 import time
 import importlib
+import logging
+import loggingAdapters
 
 class Mapper:
 
@@ -26,7 +26,7 @@ class Mapper:
 		try:
 			self.provides = config["provides"]
 		except KeyError:
-			pass
+			self.provides=None
 
 		try:
 			self.requires = config["requires"]
