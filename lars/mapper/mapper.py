@@ -1,7 +1,7 @@
 import time
 import importlib
 import logging
-import loggingAdapters
+from lars import loggingAdapters
 
 class Mapper:
 
@@ -42,6 +42,7 @@ class Mapper:
 		try:
 			record = self.process(record)
 		except Exception, e:
+			self.logger.error('MapperError: %s' % self.name)
 			self.logger.exception(e)
 			if error:
 				raise

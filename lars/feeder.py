@@ -8,6 +8,7 @@ import ujson
 import argparse
 import csv
 import time
+import json
 
 import multiprocessing as mt
 #from http_node import PeriodicTask
@@ -46,7 +47,7 @@ class FileReader():
 
 
 class Feeder(mt.Process):
-	def __init__(self, q, uri, isDone, id, inputIsJsonStr,):
+	def __init__(self, q, uri, isDone, id, inputIsJsonStr, output=None,):
 		super(Feeder, self).__init__()
 		self.name = 'Feeder-%s' % id
 		self.logger = logging.getLogger(self.name)
@@ -54,6 +55,9 @@ class Feeder(mt.Process):
 		self.isDone = isDone
 		self.isJson = inputIsJsonStr
 		self.uri = uri
+		self.output_file = None
+		if output != None:
+			self.output_file = open(output,'w')
 
 	def run(self):
 		self.logger.info('Started')
@@ -76,6 +80,10 @@ class Feeder(mt.Process):
 					end = time.time()
 					self.logger.info('RecordRequest - %s - [%s]' % (resp.status_code, (end-start)*1000))
 
+					if self.output_file != None:
+						self.output_file.write('%s\n' % json.dumps(resp.json()))
+						self.output_file.flush()
+
 				except requests.exceptions.Timeout,e:
 					self.logger.warning("RequestTimeout exceded. Retry %s of 3" % attempts)
 					attempts += 1
@@ -84,19 +92,23 @@ class Feeder(mt.Process):
 						i = attempts/2.0
 						time.sleep(i*i)
 					else:
+						self.q.task_done()
 						self.logger.exception(e)
 				except Exception,e:
 					self.logger.exception(e)
+			self.q.task_done()
+
+		if self.output_file != None:
+			self.output_file.close()
 
 def report_qsize(q, logger):
 	logger.info('QueueSize=%s'%q.qsize())
 
-def run_feeders(input_file, delim, uri, num_feeders, batch_size, queue_size, input_is_json):
+def run_feeders(input_file, delim, uri, num_feeders, batch_size, queue_size, input_is_json, output=None):
 	
 	logger = logging.getLogger('FeederControl')
 	# create process-safe queue
-	q = mt.Queue(queue_size)
-	
+	q = mt.JoinableQueue(queue_size)
 	# start queue size logger
 	#p = PeriodicTask(5, report_qsize, q=q, logger=logger)
 	#p.run()
@@ -105,9 +117,12 @@ def run_feeders(input_file, delim, uri, num_feeders, batch_size, queue_size, inp
 	logger.info('Starting feeders')
 	feeders = []
 	for i in range(num_feeders):
+		this_output = None
+		if output != None:
+			this_output = "%s.%s" % (output,i)
 		isDone = mt.Event()
 		
-		f = Feeder(q, uri, isDone, i, input_is_json)
+		f = Feeder(q, uri, isDone, i, input_is_json, this_output)
 		f.daemon = True
 		f.start()
 		feeders.append((f, isDone ))
@@ -127,8 +142,7 @@ def run_feeders(input_file, delim, uri, num_feeders, batch_size, queue_size, inp
 	
 	# wait for the queue to be empty
 	logger.info('All input queued, waiting for it to be drained')
-	while not q.empty():
-		time.sleep(.25)
+	q.join()
 
 	logger.info('Stopping feeders')
 	# wait for the feeders to be done
@@ -147,6 +161,7 @@ if __name__ == '__main__':
 	parser.add_argument('input_file', nargs=1, type=argparse.FileType('r'), help='Delimited input file. REQUIRES HEADER.')
 	parser.add_argument('delim', default='|', help='Input file delimiter. If the file is already in JSON format (one line per record) specify "JSON". (default: %(default)s')
 	parser.add_argument('--var_uri', metavar='HOST', default='http://localhost:8091/vars', help='Variable server to submit jobs to.')
+	parser.add_argument('--output', metavar='FILE', default=None, help='Response output file. (default: %(default)s)')
 	# options
 	group = parser.add_argument_group('Logging')
 	parser.add_argument('--log', metavar='FILE', default=None, help='Log file. (default: %(default)s)')
@@ -156,7 +171,7 @@ if __name__ == '__main__':
 	group = parser.add_argument_group('Performance tuning.')
 	group.add_argument('--num_feeders', metavar='INT', default=1, type=int, help='Number of processes to spin up. (default: %(default)s')
 	group.add_argument('--batch_size', metavar='INT', default=1, type=int, help='Batch size that each feeder will process. (default: %(default)s')
-	group.add_argument('--queue_size',metavar='INT',default=5000, type=int, help='Maximum length of queue, measured in number of batches. (default: %s(default)s')
+	group.add_argument('--queue_size',metavar='INT',default=5000, type=int, help='Maximum length of queue, measured in number of batches. (default: %(default)s')
 
 
 	args = parser.parse_args()
@@ -168,6 +183,6 @@ if __name__ == '__main__':
 	logging.basicConfig(**logging_config)
 	
 	input_is_json = args.delim in ('JSON','json','Json')
-	run_feeders(args.input_file[0], args.delim, args.var_uri, args.num_feeders, args.batch_size, args.queue_size, input_is_json)
+	run_feeders(args.input_file[0], args.delim, args.var_uri, args.num_feeders, args.batch_size, args.queue_size, input_is_json, args.output)
 
 

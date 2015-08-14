@@ -1,4 +1,4 @@
-from mapper import Mapper
+from lars.mapper import Mapper
 from datetime import datetime as dt
 class ObsDateMapper(Mapper):
 

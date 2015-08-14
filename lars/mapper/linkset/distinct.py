@@ -1,4 +1,4 @@
-from mapper import Mapper
+from lars.mapper import Mapper
 
 class MapDistinct(Mapper):
 	def loadConfigJSON(self,config):

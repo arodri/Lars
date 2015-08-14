@@ -1,4 +1,4 @@
-from mapper import Mapper
+from lars.mapper import Mapper
 import json
 import logging
 

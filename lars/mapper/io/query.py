@@ -1,4 +1,4 @@
-import mapper
+from lars import mapper
 import time
 import logging
 import math

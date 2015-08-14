@@ -10,9 +10,9 @@ import argparse
 import socket
 
 from feeder import FileReader
-import mapper 
-from outputter import *
-from record import record
+from lars import mapper 
+from lars.outputter import *
+from lars.record import record
 #todo- make class vars instead of strings
 #TODO: Name the workflows so that you can auto assign record_ids in a multi-threaded environment
 
@@ -59,6 +59,14 @@ class Workflow(object):
 			self.logger.error(e)
 			sys.exit(1)
 
+		self.modify_response = False
+		self.response_fields = []
+		if 'response_format' in wf: 
+			self.modify_response = True
+			with open(wf['response_format'],'r') as fmt:
+				for line in fmt:
+					self.response_fields.append(line.strip())
+
 	def enableTiming(self):
 		self.timing = True
 	def disableTiming(self):
@@ -67,7 +75,6 @@ class Workflow(object):
 		self.exceptOnMapperError = False
 	def disableExceptionHandling(self):
 		self.exceptOnMapperError = True
-			
 
 	def stop(self):
 		for (mapper,outputts) in self.mappers:
@@ -110,9 +117,18 @@ class Workflow(object):
 			i+=1
 		#increment the processed records
 		self.numProc+=1
-		return thisRec
+		return self.make_response(thisRec)
 
-
+	def make_response(self, thisRec):
+		if not self.modify_response:
+			return thisRec
+		else:
+			resp = record({})
+			resp.set_context(thisRec.get_context())
+			for field in self.response_fields:
+				if field in thisRec:
+					resp[field] = thisRec[field]
+			return resp
 
 
 if __name__ == "__main__":

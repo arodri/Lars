@@ -1,5 +1,5 @@
 from datetime import timedelta
-from mapper import Mapper
+from lars.mapper import Mapper
 import copy
 
 class DatedCrosstabMapper(Mapper):

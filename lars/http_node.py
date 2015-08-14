@@ -4,6 +4,7 @@ import logging, os
 import json
 import threading
 from threading import Timer
+from threading import RLock
 #import subprocess, requests
 #from requests import Session
 
@@ -16,7 +17,7 @@ import tornado
 from tornado.web import RequestHandler, Application, url
 from tornado.ioloop import IOLoop
 
-from workflow import Workflow
+from lars.workflow import Workflow
 
 def JSONDefault(obj):
 	import datetime
@@ -42,6 +43,8 @@ class WorkflowWrapper:
 		self.name = name
 		self._workflow = Workflow()
 		self._workflow.buildJSON(config, instanceID="%s.%s" % (serviceID, name))
+
+		self.st_lock = RLock()
 
 		self.total_served = 0
 
@@ -72,9 +75,10 @@ class WorkflowWrapper:
 		self._workflow.stop()
 
 	def process(self, record):
-
 		start = time.time()
+		self.st_lock.acquire()
 		resp = self._workflow.process(record)
+		self.st_lock.release()
 		end = time.time()
 
 		self.updateCounts((end-start)*1000)
