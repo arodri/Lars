@@ -24,6 +24,7 @@ class SQLMapper(mapper.Mapper):
 			raise mapper.MapperConfigurationException("%s: must configure 'queryFile' XOR 'queryString'" % self.name)
 
 		self.__initalize()
+		self.__init_cnx_pool()
 
 	def __setSkipValues(self, skip_values):
 		self.skip_values = {}
@@ -35,7 +36,6 @@ class SQLMapper(mapper.Mapper):
 	def __initalize(self):
 		self.outputKeyTiming = self.outputKey+"_QUERY_TIME"
 		self.provides = [ self.outputKey, self.outputKeyTiming ]
-
 
 		self.logger = logging.getLogger(self.name)
 		if self.queryLogging:
@@ -51,6 +51,7 @@ class SQLMapper(mapper.Mapper):
 			p_dict[self.batched_parameter] = self.batched_parameter
 		self.queryString % p_dict
 
+	def __init_cnx_pool(self):
 		self.logger.info("Opening connections")
 		if 'sqlite' not in self.engineUrl:
 			self.__cnx_pool = sqlalchemy.create_engine(self.engineUrl, pool_size=self.queryPoolSize)
