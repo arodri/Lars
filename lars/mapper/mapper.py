@@ -1,7 +1,7 @@
 import time
 import importlib
 import logging
-from lars import loggingAdapters
+from lars import log
 
 class Mapper:
 
@@ -54,9 +54,9 @@ class Mapper:
 	def stop(self):
 		pass
 
-	def initLogger(self):
-		logger = logging.getLogger(self.name)
-		self.logger = loggingAdapters.WorkflowLoggerAdapter(logger,None)
+	def initLogger(self, ctx):
+		logger = logging.getLogger('lars.mapper.%s' % self.name)
+		self.logger = log.LarsLoggerAdapter(logger, ctx)
 
 
 	def verifyParallizable(self):
@@ -79,7 +79,7 @@ class JSONMapperBuilder(MapperBuilder):
 
 
 	@staticmethod
-	def buildFromJSON(config):
+	def buildFromJSON(config, ctx):
 		parsed_class_path = config["class"].split(".")
 		module_name,class_name = ('.'.join(parsed_class_path[:-1]), parsed_class_path[-1])
 		thisMod = importlib.import_module(module_name)
@@ -88,15 +88,16 @@ class JSONMapperBuilder(MapperBuilder):
 		thisMap.initJSON(config)
 		skip = thisMap.skip
 		if not skip:
+			thisMap.initLogger(ctx)
 			thisMap.loadConfigJSON(config)
 			thisMap.isValid()
-			thisMap.initLogger()
+			thisMap.initLogger(ctx)
 	#	else:
 	#		thisMap = None
 		return (thisMap,skip)
 	
-	def getMapper(self):
-		return self.buildFromJSON(self.config)
+	def getMapper(self, ctx=None):
+		return self.buildFromJSON(self.config, ctx)
 
 
 class MapperConfigurationException(Exception):

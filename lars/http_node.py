@@ -5,18 +5,12 @@ import json
 import threading
 from threading import Timer
 from threading import RLock
-#import subprocess, requests
-#from requests import Session
-
-#from flask.views import View
-#from flask import Flask
-#from flask import request
-#from flask.views import MethodView
 
 import tornado
 from tornado.web import RequestHandler, Application, url
 from tornado.ioloop import IOLoop
 
+import lars
 from lars.workflow import Workflow
 
 def JSONDefault(obj):
@@ -183,7 +177,7 @@ class HeartBeatHandler(tornado.web.RequestHandler):
 
 class HTTPWorkflowServer(object):
 	def __init__(self, port, workflow=None):
-		self.logger = logging.getLogger('HTTPWorkflowServer')
+		self.logger = logging.getLogger('lars.HTTPWorkflowServer')
 		self.logger.info('Configuring web server')
 		
 		self.wf_manager = WorkflowManager()
@@ -207,23 +201,20 @@ if __name__ == '__main__':
 	#parser.add_argument('workflow.json', nargs=1, type=argparse.FileType('r'), help='JSON workflow configuration.')
 	# options
 	parser.add_argument('--log', metavar='FILE', default=None, help='Log file. (default: STDOUT)')
-	#parser.add_argument('--log', metavar='FILE', type=argparse.FileType('a'), default="server.log", help='Log file. (default: %(default)s)')
 	parser.add_argument('--loglevel', metavar='LEVEL', choices=["INFO","DEBUG","WARNING","ERROR"], default='INFO', help='Logging level: %(choices)s (default: %(default)s)')
 	parser.add_argument('--http_port', metavar='PORT', default=9000, type=int, help='HTTP port to listen on. (default: %(default)s')
 	parser.add_argument('--default_workflow', metavar='JSON_FILE', default=None, type=argparse.FileType('r'), help='Workflow to put on lars/default. Useful for running on commandline')
-	
+
 	args = parser.parse_args()
 
-	logging_config = dict(level=getattr(logging, args.loglevel), format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 	if args.log != None:
-		logging_config['filename'] = args.log
-		logging_config['filemode'] = 'a'
-	
+		lars.log.configure_json_file(logs.log, level=args.loglevel)
+	else:
+		lars.log.configure_json_stderr(level=args.loglevel)
 	workflow_config = None
 	if args.default_workflow != None:
 		workflow_config = json.loads(args.default_workflow.read())
 
-	logging.basicConfig(**logging_config)
 
 	#workflow_json = json.load(args.workflow.json[0])
 	#args,workflow.json[0].close()

@@ -2,7 +2,6 @@ from lars.mapper import Mapper
 
 class MapDistinct(Mapper):
 	def loadConfigJSON(self,config):
-		self.name = config["name"]
 		self.distinct_fields = config["distinct_fields"]
 		self.record_lists = config["record_lists"]
 

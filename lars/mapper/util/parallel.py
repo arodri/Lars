@@ -5,7 +5,6 @@ import concurrent.futures
 class FuturesMapper(mapper.Mapper):
 
 	def loadConfigJSON(self,config):
-		self.name = config["name"]
 		self.pool_size = config.get("pool_size", 20)
 		self.mapper_configs = config["mappers"]
 		self.mapper_defs = []
@@ -13,13 +12,12 @@ class FuturesMapper(mapper.Mapper):
 
 		self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.pool_size)
 
-		self.logger = logging.getLogger(self.name)
 		self.logger.info("Parsing parallel config")
 
 		for map_config in self.mapper_configs:
 			# create the mapper
 			builder = mapper.JSONMapperBuilder(map_config)
-			(thisMapper,skip) = builder.getMapper()
+			(thisMapper,skip) = builder.getMapper(self.logger.extra)
 			if thisMapper.skip:
 				self.logger.warning("Skipping %s" % thisMapper.name)
 			else:

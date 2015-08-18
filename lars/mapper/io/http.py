@@ -68,27 +68,3 @@ class JSONRequest(HTTPRequest):
 	def makeRequestData(record):
 		return record
 
-
-class MelissaRequest(JSONRequest):
-
-	def loadConfigJSON(self,config):
-#		super(MelissaRequest, self).loadConfigJSON(config)
-		JSONRequest.loadConfigJSON(self, config)
-
-		fields = config['fields']
-		self.address1 = fields['address1']
-		self.address2 = fields['address2']
-		self.city = fields['city']
-		self.state = fields['state']
-		self.zip = fields['zip']
-
-	def makeRequestData(self, record):
-		a = record['raw_address'][0]
-		return {
-			'Address':a.get(self.address1, ""),
-			'Address2':a.get(self.address2, ""),
-			'City':a.get(self.city, ""),
-			'State':a.get(self.state, ""),
-			'Zip':a.get(self.zip)
-		}
-

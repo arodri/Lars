@@ -3,7 +3,6 @@ from datetime import datetime as dt
 class RemoveField(Mapper):
 
 	def loadConfigJSON(self,config):
-		self.name = config["name"]
 		self.removeFields = config["removeFields"]
 
 	def process(self,record):

@@ -1,3 +1,4 @@
+import lars
 from lars import mapper
 import time
 import logging
@@ -8,7 +9,6 @@ from sqlalchemy.pool import QueuePool
 class SQLMapper(mapper.Mapper):
 
 	def loadConfigJSON(self,config):
-		self.name = config["name"]
 		self.engineUrl = config["engine_url"]
 		self.queryPoolSize = config.get("query_pool_size", 2)
 		self.queryLogging = config.get("query_logging", False)
@@ -19,7 +19,6 @@ class SQLMapper(mapper.Mapper):
 		self.batched_parameter = config.get("batched_parameter", None)
 		self.batch_size = float(config.get("batch_size",10))
 		self.__setSkipValues(config.get("skip_values",{}))
-		logging.debug(config)
 		if not (self.queryString == None) ^ (self.queryFile == None):
 			raise mapper.MapperConfigurationException("%s: must configure 'queryFile' XOR 'queryString'" % self.name)
 
@@ -37,9 +36,9 @@ class SQLMapper(mapper.Mapper):
 		self.outputKeyTiming = self.outputKey+"_QUERY_TIME"
 		self.provides = [ self.outputKey, self.outputKeyTiming ]
 
-		self.logger = logging.getLogger(self.name)
 		if self.queryLogging:
 			logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+			
 		
 		if self.queryString == None:
 			self.logger.info("Reading query")
@@ -54,7 +53,7 @@ class SQLMapper(mapper.Mapper):
 	def __init_cnx_pool(self):
 		self.logger.info("Opening connections")
 		if 'sqlite' not in self.engineUrl:
-			self.__cnx_pool = sqlalchemy.create_engine(self.engineUrl, pool_size=self.queryPoolSize)
+			self.__cnx_pool = sqlalchemy.create_engine(self.engineUrl, pool_size=self.queryPoolSize, pool_recycle=300)
 		else:
 			self.__cnx_pool = sqlalchemy.create_engine(self.engineUrl)
 
