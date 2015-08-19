@@ -1,8 +1,7 @@
 import requests
 import functools
 import json
-
-from mapper import Mapper
+from lars.mapper import Mapper
 
 
 class HTTPRequest(Mapper):
@@ -27,26 +26,13 @@ class HTTPRequest(Mapper):
 		if self.action == 'POST':
 			self.http_func = self.session.post
 
-		self._http_partial = functools.partial(self.http_func, self.base_url)
-		
-		# configure the base http_request function to just apply the action to the URL
-		#  no params, no data
-		self.http_request = lambda data: self._http_partial()
-		self.is_json = False
-
 		self.provides = [self.output_key, self.response_code_key]
 
-	def setRequestToJSON(self):
-		self.is_json = True
+	def setContentToJSON(self):
 		self.session.headers.update({'Content-Type':'application/json'})
-		self.http_request = lambda data: self._http_partial(data=data)
-
-	def setRequestToParams(self):
-		self.is_json = False
-		self.http_request = lambda data: self._htt_partial(params=data)
-
-	def getResponse(self, data_or_params=None):
-		return self.http_request(data_or_params)
+	
+	def getResponse(self, data=None, params=None):
+		return self.http_func(self.base_url, data=data, params=params)
 
 	def makeRequestData(self,record):
 		raise NotImplementedError, 'makeRequest method on HTTPRequest has not been implemented'
@@ -54,52 +40,31 @@ class HTTPRequest(Mapper):
 	def process(self, record):
 		raise NotImplementedError, 'process method on HTTPRequest object has not been implemented'
 
-
-
 class JSONRequest(HTTPRequest):
 	
 
 	def loadConfigJSON(self,config):
 		#super(JSONRequest, self).loadConfigJSON(config)
 		HTTPRequest.loadConfigJSON(self, config)
-		self.setRequestToJSON()
+		self.setContentToJSON()
 
 	def process(self,record):
 		j = self.makeRequestData(record)
-		resp = self.getResponse(json.dumps(j))
-		if resp.status_code != 200:
-			self.logger.error("http_code: %s" % resp.status_code)
+		resp = self.getResponse(data=json.dumps(j))
+		#resp_code = resp.code
+		resp_code = resp.status_code
+		if resp_code != 200:
+			self.logger.error("http_code: %s" % resp_code)
 			self.logger.error(resp.text)
+			#self.logger.error(resp.body)
 			if resp.status_code >= 400:
-				raise requests.exceptions.HTTPError("HTTP_CODE: %s; %s" % (resp.status_code, resp.text))
-		record[self.response_code_key] = resp.status_code
+				raise requests.exceptions.HTTPError("HTTP_CODE: %s; %s" % (resp_code, resp.text))
+				#raise requests.exceptions.HTTPError("HTTP_CODE: %s; %s" % (resp_code, resp.body))
+		record[self.response_code_key] = resp_code
 		record[self.output_key] = resp.json()
+		#record[self.output_key] = json.loads(resp.body)
 		return record
 
 	def makeRequestData(record):
 		return record
-
-
-class MelissaRequest(JSONRequest):
-
-	def loadConfigJSON(self,config):
-#		super(MelissaRequest, self).loadConfigJSON(config)
-		JSONRequest.loadConfigJSON(self, config)
-
-		fields = config['fields']
-		self.address1 = fields['address1']
-		self.address2 = fields['address2']
-		self.city = fields['city']
-		self.state = fields['state']
-		self.zip = fields['zip']
-
-	def makeRequestData(self, record):
-		a = record['raw_address'][0]
-		return {
-			'Address':a.get(self.address1, ""),
-			'Address2':a.get(self.address2, ""),
-			'City':a.get(self.city, ""),
-			'State':a.get(self.state, ""),
-			'Zip':a.get(self.zip)
-		}
 

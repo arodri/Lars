@@ -3,30 +3,36 @@ import importlib
 import sys
 import json
 import logging
-import loggingAdapters
 import sys
 import time
 import argparse
 import socket
 
 from feeder import FileReader
-import mapper 
-from outputter import *
-from record import record
+from lars import mapper 
+from lars.outputter import *
+from lars.record import record
+from lars import log
 #todo- make class vars instead of strings
 #TODO: Name the workflows so that you can auto assign record_ids in a multi-threaded environment
 
 class Workflow(object):
 	
 	def __init__(self):
-		logger = logging.getLogger('workflow')
+		logger = logging.getLogger('lars.workflow')
 		self.timing = False
 		self.exceptOnMapperError = True
 		self.numProc = 0
-		self.context = {"hostname":socket.gethostname(),"record_id":None,"record":None}
-		self.logger = loggingAdapters.WorkflowLoggerAdapter(logger,self.context)
+		self.context = {
+			"hostname":socket.gethostname(),
+			"record_id":"STARTUP",
+			"record":None,
+			"applicationname":"lars"
+			}
+		self.logger = log.LarsLoggerAdapter(logger,self.context)
 
 	def buildJSON(self, config,instanceID=None):
+		self.context['workflow'] = instanceID
 		wf= config['workflow']
 		self.getRecordIDField = wf.get("get_recordID_field",None)
 		self.putRecordIDField = wf.get("put_recordID_field",None)
@@ -34,7 +40,7 @@ class Workflow(object):
 		self.mapperDict = {}
 		try:
 			for mapperConfig in wf['mappers']:
-				thisMap,skip = mapper.JSONMapperBuilder.buildFromJSON(mapperConfig)
+				thisMap,skip = mapper.JSONMapperBuilder.buildFromJSON(mapperConfig, self.context)
 				if skip:
 					self.logger.info("skipping %s" % thisMap.name)
 				else:
@@ -59,6 +65,14 @@ class Workflow(object):
 			self.logger.error(e)
 			sys.exit(1)
 
+		self.modify_response = False
+		self.response_fields = []
+		if 'response_format' in wf: 
+			self.modify_response = True
+			with open(wf['response_format'],'r') as fmt:
+				for line in fmt:
+					self.response_fields.append(line.strip())
+
 	def enableTiming(self):
 		self.timing = True
 	def disableTiming(self):
@@ -67,7 +81,6 @@ class Workflow(object):
 		self.exceptOnMapperError = False
 	def disableExceptionHandling(self):
 		self.exceptOnMapperError = True
-			
 
 	def stop(self):
 		for (mapper,outputts) in self.mappers:
@@ -110,9 +123,18 @@ class Workflow(object):
 			i+=1
 		#increment the processed records
 		self.numProc+=1
-		return thisRec
+		return self.make_response(thisRec)
 
-
+	def make_response(self, thisRec):
+		if not self.modify_response:
+			return thisRec
+		else:
+			resp = record({})
+			resp.set_context(thisRec.get_context())
+			for field in self.response_fields:
+				if field in thisRec:
+					resp[field] = thisRec[field]
+			return resp
 
 
 if __name__ == "__main__":
@@ -121,12 +143,13 @@ if __name__ == "__main__":
 
 	parser.add_argument('input_file', nargs=1, type=argparse.FileType('r'), help='Input file. Either delimited with a header OR 1-JSON-per-line')
 	parser.add_argument('workflow', nargs=1, type=argparse.FileType('r'), help='Workflow JSON configuration.')
+	parser.add_argument('--loglevel', metavar='LEVEL', choices=["INFO","DEBUG","WARNING","ERROR"], default='INFO', help='Logging level: %(choices)s (default: %(default)s)')
 	parser.add_argument('-d', default='|', metavar='DELIM', help='Input file delimiter. If the file is already JSON format (one line per record) specify "JSON". (default: %(default)s)')
 
 	args = parser.parse_args()
 
-	logging.basicConfig(level=logging.DEBUG)
-	
+	log.configure_json_stderr(level=args.loglevel)
+
 	wf = Workflow()
 	with args.workflow[0] as wfFH:
 		wf.buildJSON(json.load(wfFH))
@@ -134,6 +157,6 @@ if __name__ == "__main__":
 	with args.input_file[0] as recordFH:
 		reader = FileReader(recordFH, args.d)
 		for r in reader:
-			logging.debug(wf.process(r))
+			wf.logger.debug(wf.process(r))
 
 

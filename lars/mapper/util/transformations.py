@@ -1,5 +1,5 @@
 import logging
-from mapper import Mapper
+from lars.mapper import Mapper
 
 
 class Substring(Mapper):

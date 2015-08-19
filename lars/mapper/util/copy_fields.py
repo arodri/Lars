@@ -1,10 +1,8 @@
-from mapper import Mapper
+from lars.mapper import Mapper
 from datetime import datetime as dt
 class CopyFields(Mapper):
 
 	def loadConfigJSON(self,config):
-		self.name = config["name"]
-
 		self.copy_fields = []
 		copy_fields = config["fields"]
 		for d in copy_fields:

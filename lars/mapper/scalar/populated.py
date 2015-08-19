@@ -1,4 +1,4 @@
-from mapper import Mapper
+from lars.mapper import Mapper
 
 class Populated(Mapper):
 	_DEFAULT_MISSING_VALUES = ['', 'NULL', '\N']

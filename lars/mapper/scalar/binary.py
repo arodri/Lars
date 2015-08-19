@@ -1,9 +1,8 @@
-from mapper import Mapper
+from lars.mapper import Mapper
 
 class BooleanToNumeric(Mapper):
 
 	def loadConfigJSON(self,config):
-		self.name = config["name"]
 		self.true_value = config["true_value"]
 		self.false_value = config["false_value"]
 
@@ -31,17 +30,15 @@ class NumericToBool(Mapper):
 			output_field = field["output"]
 			false_value = field.get("false_value",0)
 			true_value = field.get("true_value",1) # 1 or greater
-			self.fields.append((input_field,output_field,false_value,true_value))
+			self.fields.append((input_field,output_field,true_value,false_value))
 			self.provides = output_field
 	
 	def process(self, record):
-		for (input,output,true_value,false_value) in self.fields:
-			if record[input] == false_value:
-				record[output] = self.false_output_value # not found
-			elif record[input] >= true_value:
-				record[output] = self.true_output_value # found
+		for (input_field,output_field,true_value,false_value) in self.fields:
+			if record[input_field] >= true_value:
+				record[output_field] = self.true_output_value # found
 			else:
-				record[output] = self.error_output_value # "error"
+				record[output_field] = self.false_output_value # "error"
 		return record
 
 

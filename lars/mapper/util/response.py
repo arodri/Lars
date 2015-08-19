@@ -1,6 +1,6 @@
 import json
 
-from mapper import Mapper
+from lars.mapper import Mapper
 
 
 class ResponseMapper(Mapper):
