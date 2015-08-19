@@ -48,10 +48,11 @@ class VitessSQLMapper(SQLMapper):
 
 	def __init_cnx_pool(self):
 		self.logger.info("Opening connections")
-		if 'sqlite' not in self.engineUrl:
-			self.__cnx_pool = sqlalchemy.create_engine(self.engineUrl, pool_size=self.queryPoolSize)
-		else:
-			self.__cnx_pool = sqlalchemy.create_engine(self.engineUrl)
+		self.__cnx_pool = QueuePool(self.__get_connection, pool_size=self.queryPoolSize)
+
+	def __get_connection(self):
+		return vtgatev2.connect({'vt':[self.vtgate]}, 10)
+
 
 		
 	def __exec_query(self,params,batch_id):
@@ -67,10 +68,11 @@ class VitessSQLMapper(SQLMapper):
 		qEnd = time.time()
 		dur = (qEnd-qStart)*1000
 		self.logger.debug("- %s - Fetching results" % batch_id)
+		keys = [ f[0] for f in cursor.description ]
 		resultData = cursor.fetchall()
 		self.logger.debug("- %s - Results fetched - %0.2f ms" % (batch_id,dur))
 		cursor.close()
 		conn.close()
-		return [ dict(zip(r.keys(), r.values())) for r in resultData ], dur
+		return [ dict(zip(keys, values)) for values in resultData ], dur
 
 
