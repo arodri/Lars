@@ -123,6 +123,8 @@ class Workflow(object):
 			i+=1
 		#increment the processed records
 		self.numProc+=1
+		dur = (time.time()-start)*1000
+		self.logger.info("Processed in %0.2fms" % dur)
 		return self.make_response(thisRec)
 
 	def make_response(self, thisRec):

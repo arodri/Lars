@@ -9,7 +9,7 @@ JSON_FORMAT="""{
 	"name":"%(name)s",
 	"level":"%(levelname)s",
 	"requestid":"%(record_id)s",
-	"msg":"%(msg)s"
+	"message":"%(message)s"
 }""".replace('\n','').replace('\t',' ')
 
 BASIC_FORMAT='%(asctime)s - %(name)s - %(record_id)s - %(levelname)s - %(message)s'
@@ -22,7 +22,7 @@ class LarsFormatter(logging.Formatter):
 
 	def formatTime(self, record, datefmt=None):
 		#return logging.Formatter.formatTime(self, record, datefmt)
-		return logging.Formatter.formatTime(self, LarsFormatter.with_context(record), datefmt=None)
+		return logging.Formatter.formatTime(self, LarsFormatter.with_context(record), datefmt)
 
 	@staticmethod
 	def with_context(record):
