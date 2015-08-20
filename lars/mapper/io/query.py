@@ -3,15 +3,12 @@ from lars import mapper
 import time
 import logging
 import math
-import sqlalchemy
-from sqlalchemy.pool import QueuePool
+from . import dbwrapper
 
 class SQLMapper(mapper.Mapper):
 
 	def loadConfigJSON(self,config):
-		self.engineUrl = config["engine_url"]
-		self.queryPoolSize = config.get("query_pool_size", 2)
-		self.queryLogging = config.get("query_logging", False)
+		self.dbwrapper = dbwrapper.get_wrapper(config)
 		self.outputKey = config["outputKey"]
 		self.queryString = config.get("queryString", None)
 		self.queryFile = config.get("queryFile", None)
@@ -23,7 +20,6 @@ class SQLMapper(mapper.Mapper):
 			raise mapper.MapperConfigurationException("%s: must configure 'queryFile' XOR 'queryString'" % self.name)
 
 		self.__initalize()
-		self.__init_cnx_pool()
 
 	def __setSkipValues(self, skip_values):
 		self.skip_values = {}
@@ -36,10 +32,6 @@ class SQLMapper(mapper.Mapper):
 		self.outputKeyTiming = self.outputKey+"_QUERY_TIME"
 		self.provides = [ self.outputKey, self.outputKeyTiming ]
 
-		if self.queryLogging:
-			logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
-			
-		
 		if self.queryString == None:
 			self.logger.info("Reading query")
 			with open(self.queryFile,'r') as qf:
@@ -49,13 +41,6 @@ class SQLMapper(mapper.Mapper):
 		if self.batched_parameter != None:
 			p_dict[self.batched_parameter] = self.batched_parameter
 		self.queryString % p_dict
-
-	def __init_cnx_pool(self):
-		self.logger.info("Opening connections")
-		if 'sqlite' not in self.engineUrl:
-			self.__cnx_pool = sqlalchemy.create_engine(self.engineUrl, pool_size=self.queryPoolSize, pool_recycle=300)
-		else:
-			self.__cnx_pool = sqlalchemy.create_engine(self.engineUrl)
 
 	def process(self,record):
 		params = {}
@@ -95,15 +80,9 @@ class SQLMapper(mapper.Mapper):
 		return record
 		
 	def __exec_query(self,params,batch_id):
-		qStart = time.time()
 		self.logger.debug("- %s - Staring query" % batch_id)
-		results = self.__cnx_pool.execute(self.queryString, params)
-		self.logger.debug("- %s - Query returned" % batch_id)
-		qEnd = time.time()
-		dur = (qEnd-qStart)*1000
-		self.logger.debug("- %s - Fetching results" % batch_id)
-		resultData = results.fetchall()
-		self.logger.debug("- %s - Results fetched - %0.2f ms" % (batch_id,dur))
-		return [ dict(zip(r.keys(), r.values())) for r in resultData ], dur
+		(results, query_time, fetch_time) = self.dbwrapper.execute(self.queryString, params)
+		self.logger.debug("- %s - %s results fetched - %0.2f ms" % (batch_id, len(results), query_time+fetch_time))
+		return results, query_time + fetch_time
 
 
