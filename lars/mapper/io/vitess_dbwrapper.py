@@ -32,7 +32,7 @@ class VitessDBWrapper(DBWrapper):
 		if self.sharded and self.batched_parameter == None:
 			raise Exception('Cannot shard without a batched parameter')
 
-		self._cnx_pool = QueuePool(self.__connect, pool_size=self.query_pool_size)
+		self._cnx_pool = QueuePool(self.__connect, pool_size=self.query_pool_size, recycle=60)
 
 	def execute(self, query, params={}):
 		start = time.time()
