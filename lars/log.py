@@ -72,8 +72,8 @@ def configure_basic_stderr(level='INFO'):
 def configure_json_stderr(level='INFO'):
 	configure_stderr(level=level, fmt=JSON_FORMAT)
 
-def configure_basic_file(level='INFO'):
-	configure_file(level=level, fmt=BASIC_FORMAT)
+def configure_basic_file(filename, filemode='w', level='INFO'):
+	configure_file(filename, filemode=filemode, level=level, fmt=BASIC_FORMAT)
 
-def configure_json_file(level='INFO'):
-	configure_file(level=level, fmt=JSON_FORMAT)
+def configure_json_file(filename, filemode='w', level='INFO'):
+	configure_file(filename, filemode=filemode, level=level, fmt=JSON_FORMAT)

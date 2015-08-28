@@ -208,9 +208,9 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 
 	if args.log != None:
-		lars.log.configure_json_file(logs.log, level=args.loglevel)
+		lars.log.configure_json_file(args.log, level=args.loglevel)
 	else:
-		lars.log.configure_json_stderr(level=args.loglevel)
+		lars.log.configure_json_stderr(args.loglevel)
 	workflow_config = None
 	if args.default_workflow != None:
 		workflow_config = json.loads(args.default_workflow.read())
