@@ -21,7 +21,8 @@ class Driver(object):
 		haproxy_var_port, var_ports,
 		loglevel,
 		input_file, delim, 
-		num_feeders, batch_size, queue_size):
+		num_feeders, batch_size, queue_size,
+		output_file):
 
 		self.haproxies = []
 		self.varnodes = []
@@ -41,6 +42,8 @@ class Driver(object):
 		self.num_feeders = num_feeders
 		self.batch_size = batch_size
 		self.queue_size = queue_size
+
+		self.output_file = output_file
 
 		self.logger = logging.getLogger('Driver')
 
@@ -88,6 +91,7 @@ class Driver(object):
 				--var_uri=%(var_uri)s
 				--log=%(feeder_log)s
 				--loglevel=%(loglevel)s
+				--output=%(output_file)s
 				--num_feeders=%(numfeeders)s
 				--queue_size=%(queuesize)s
 				--batch_size=%(batchsize)s
@@ -96,6 +100,7 @@ class Driver(object):
 				"LARSDIR":LARSDIR,
 				"var_uri":"http://localhost:%s/lars/default" % self.haproxy_var_port,
 				"feeder_log":"logs/feeder.%s.log" % log_file_str,
+				"output_file":self.output_file,
 				"loglevel":self.loglevel,
 				"numfeeders":self.num_feeders,
 				"batchsize":self.batch_size,
@@ -220,6 +225,7 @@ if __name__ == '__main__':
 	group.add_argument('--num_feeders', metavar='NUM', default=1, type=int, help="Number if feeders to run (default: %(default)s")
 	group.add_argument('--batch_size', metavar='NUM', default=1, type=int, help="Batch size to process. (default: %(default)s")
 	group.add_argument('--queue_size', metavar='NUM', default=5000, type=int, help="Maximum queue size (#batches). (default: %(default)s")
+	group.add_argument('--output_file', metavar='STRING', default="output/response.txt", type=string, help="Optional response output file(s). Will generate one output file per feeder. (default: %(default)s")
 
 	group = parser.add_argument_group('Variable nodes')
 	group.add_argument('--var_start_port', metavar='PORT', default=9100, type=int, help='Starting HTTP port for variable nodes to listen on. (default: %(default)s)')
@@ -251,7 +257,8 @@ if __name__ == '__main__':
 		args['delim'],
 		args['num_feeders'],
 		args['batch_size'],
-		args['queue_size']
+		args['queue_size'],
+		args['output_file']
 	)
 
 	if not os.path.exists('logs'):
