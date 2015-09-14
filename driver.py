@@ -225,7 +225,7 @@ if __name__ == '__main__':
 	group.add_argument('--num_feeders', metavar='NUM', default=1, type=int, help="Number if feeders to run (default: %(default)s")
 	group.add_argument('--batch_size', metavar='NUM', default=1, type=int, help="Batch size to process. (default: %(default)s")
 	group.add_argument('--queue_size', metavar='NUM', default=5000, type=int, help="Maximum queue size (#batches). (default: %(default)s")
-	group.add_argument('--output_file', metavar='STRING', default="output/response.txt", type=string, help="Optional response output file(s). Will generate one output file per feeder. (default: %(default)s")
+	group.add_argument('--output_file', metavar='STRING', default="output/response.txt", type=str, help="Optional response output file(s). Will generate one output file per feeder. (default: %(default)s")
 
 	group = parser.add_argument_group('Variable nodes')
 	group.add_argument('--var_start_port', metavar='PORT', default=9100, type=int, help='Starting HTTP port for variable nodes to listen on. (default: %(default)s)')
