@@ -136,6 +136,8 @@ class Workflow(object):
 			for field in self.response_fields:
 				if field in thisRec:
 					resp[field] = thisRec[field]
+				else:
+					raise KeyError('Missing output field %s from record' % field)
 			return resp
 
 
