@@ -8,16 +8,32 @@ class SQLAlchemyDBWrapper(DBWrapper):
 		DBWrapper.__init__(self, config)
 
 		if 'sqlite' not in self.engine_url:
-			self._cnx_pool = sqlalchemy.create_engine(self.engine_url)
+			self._cnx_pool = sqlalchemy.create_engine(self.engine_url,pool_recycle=3600)
 		else:
 			self._cnx_pool = sqlalchemy.create_engine(self.engine_url, pool_size=self.query_pool_size)
 
 		if config.get('query_logging', False):
 			logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+                self.max_attempts = config.get("max_attempts",3)
+                self.initial_delay = config.get("initial_delay",.05)
+
+        def retry_execs(self,query,params):
+            attempts = 1
+            delay = self.initial_delay
+            while attempts < self.max_attempts:
+                try:
+                    return self._cnx_pool.execute(query,params)
+                except sqlalchemy.exc.DBAPIError,e:
+                    attempts += 1
+                    print "waiting %s seconds then retrying" % delay
+                    time.sleep(delay)
+                    delay *= 2
+            return self._cnx_pool.execute(query,params)        
+
 
 	def execute(self, query, params={}):
 		qstart = time.time()
-		results = self._cnx_pool.execute(query, params) 
+		results = self.retry_execs(query,params)
 		qtime = (time.time() - qstart)*1000
 
 		if results.returns_rows:
