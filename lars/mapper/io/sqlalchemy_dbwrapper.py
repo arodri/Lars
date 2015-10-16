@@ -2,24 +2,7 @@ import sqlalchemy
 import time
 import logging
 from .dbwrapper import DBWrapper
-import threading
-from threading import Timer
-import random 
-
-class PeriodicTask(object):
-    def __init__(self,interval,callback, daemon=True, jitter=0, **kwargs):
-        self.interval = interval
-        self.callback = callback
-        self.daemon = daemon
-        self.kwargs = kwargs
-        self.jitter = interval*jitter
-
-    def run(self):
-            self.callback(**self.kwargs)
-            interval = self.interval+(self.jitter*random.uniform(-1,1))
-            t = Timer(interval,self.run)
-            t.daemon = self.daemon
-            t.start()
+from lars.util import PeriodicTask
 
 class SQLAlchemyDBWrapper(DBWrapper):
 	def __init__(self, config):
@@ -34,9 +17,10 @@ class SQLAlchemyDBWrapper(DBWrapper):
 			logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
                 self.max_attempts = config.get("max_attempts",3)
                 self.initial_delay = config.get("initial_delay",.05)
-                ping = config.get("ping_delay",1)
+                self.dummy_query = config.get("dummy_query","SELECT 'I AM A DUMMY'")
+                ping = config.get("ping_delay",30)
                 #check to see if connection params are good
-                t = PeriodicTask(ping, self.arod_query)
+                t = PeriodicTask(ping, self.arod_query,jitter=.25)
                 t.run()
                 try:
                     self.arod_query()
@@ -44,7 +28,9 @@ class SQLAlchemyDBWrapper(DBWrapper):
                     raise Exception("Failed to connect using url %s" % self.engine_url)
 
         def arod_query(self):
-            self._cnx_pool.execute("SELECT 'I AM A DUMMY'")
+            logger = logging.getLogger()
+            logger.info("connection heartbeat for DB")
+            self._cnx_pool.execute(self.dummy_query)
 
         def retry_execs(self,query,params):
             attempts = 1
@@ -54,7 +40,8 @@ class SQLAlchemyDBWrapper(DBWrapper):
                     return self._cnx_pool.execute(query,params)
                 except sqlalchemy.exc.DBAPIError,e:
                     attempts += 1
-                    print "waiting %s seconds then retrying" % delay
+                    log = logging.getLogger()
+                    logging.warning("DB Connection Failed: waiting %s seconds then retrying" % delay)
                     time.sleep(delay)
                     delay *= 2
             return self._cnx_pool.execute(query,params)        

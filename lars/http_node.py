@@ -12,24 +12,13 @@ from tornado.ioloop import IOLoop
 
 import lars
 from lars.workflow import Workflow
+from lars.util import PeriodicTask
 
 def JSONDefault(obj):
 	import datetime
 	if isinstance(obj, datetime.datetime):
 		return obj.strftime('%Y%m%d_%H:%M:%S.%f')
 
-class PeriodicTask(object):
-	def __init__(self, interval, callback, daemon=True, **kwargs):
-		self.interval = interval
-		self.callback = callback
-		self.daemon   = daemon
-		self.kwargs   = kwargs
-
-	def run(self):
-		self.callback(**self.kwargs)
-		t = Timer(self.interval, self.run)
-		t.daemon = self.daemon
-		t.start()
 
 class WorkflowWrapper:
 
