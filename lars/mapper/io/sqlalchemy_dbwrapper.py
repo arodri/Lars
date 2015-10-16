@@ -19,9 +19,9 @@ class SQLAlchemyDBWrapper(DBWrapper):
                 self.initial_delay = config.get("initial_delay",.05)
                 self.dummy_query = config.get("dummy_query","SELECT 'I AM A DUMMY'")
                 ping = config.get("ping_delay",30)
-                #check to see if connection params are good
-                t = PeriodicTask(ping, self.arod_query,jitter=.25)
-                t.run()
+                if ping > 0:
+                    t = PeriodicTask(ping, self.arod_query,jitter=.25)
+                    t.run()
                 try:
                     self.arod_query()
                 except sqlalchemy.exc.OperationalError:
