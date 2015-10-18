@@ -25,16 +25,16 @@ class HTTPRequest(Mapper):
 			self.http_func = self.session.get
 		if self.action == 'POST':
 			self.http_func = self.session.post
-                ping = config.get("ping",30)
-                if ping > 0:
-                    t = PeriodicTask(ping, self.arod_request,jitter=.25)
-                    t.run()
+		ping = config.get("ping",30)
+		if ping > 0:
+			t = PeriodicTask(ping, self.arod_request,jitter=config.get("jitter",.25))
+			t.run()
+		self.arod_request()
 		self.provides = [self.output_key, self.response_code_key]
 
-        def arod_request(self):
-            self.session.options(self.base_url)
-            self.logger.info("connection heartbeat for %s" % self.base_url)
-            
+	def arod_request(self):
+		self.session.options(self.base_url)
+		self.logger.info("connection heartbeat for %s" % self.base_url)
 
 	def setContentToJSON(self):
 		self.session.headers.update({'Content-Type':'application/json'})
