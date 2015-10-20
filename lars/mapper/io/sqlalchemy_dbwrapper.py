@@ -29,7 +29,7 @@ class SQLAlchemyDBWrapper(DBWrapper):
 
 	def arod_query(self):
 		logger = logging.getLogger()
-		logger.info("connection heartbeat for DB")
+		logger.debug("connection heartbeat for DB")
 		self._cnx_pool.execute(self.dummy_query)
 
 	def retry_execs(self,query,params):

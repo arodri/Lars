@@ -34,7 +34,7 @@ class HTTPRequest(Mapper):
 
 	def arod_request(self):
 		self.session.options(self.base_url)
-		self.logger.info("connection heartbeat for %s" % self.base_url)
+		self.logger.debug("connection heartbeat for %s" % self.base_url)
 
 	def setContentToJSON(self):
 		self.session.headers.update({'Content-Type':'application/json'})
