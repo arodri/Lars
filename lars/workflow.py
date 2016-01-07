@@ -20,6 +20,20 @@ from lars import log
 
 ENV_RE = re.compile("<%= ENV\[\'.+?\'\] %>")
 
+def replace_env(wf_str):
+    replacements = ENV_RE.findall(wf_str)
+    bads = []
+    for replace in replacements:
+        env_var = replace.split("ENV['")[1].split("']")[0]
+        env_val =  os.environ.get(env_var)
+        if env_val:
+            wf_str = wf_str.replace(replace,env_val)
+        else:
+            bads.append(env_var)
+    if len(bads) != 0:
+        raise KeyError("The following environment variables do not exist %s" % bads)
+    return wf_str
+
 class Workflow(object):
 
 	
@@ -35,21 +49,6 @@ class Workflow(object):
 			"applicationname":"lars"
 			}
 		self.logger = log.LarsLoggerAdapter(logger,self.context)
-        
-        def buildJSON_env(self,wf_str,instanceID=None):
-            replacements = ENV_RE.findall(wf_str)
-            bads = []
-            for replace in replacements:
-                env_var = replace.split("ENV['")[1].split("']")[0]
-                env_val =  os.environ.get(env_var)
-                if env_val:
-                    wf_str = wf_str.replace(replace,env_val)
-                else:
-                    bads.append(env_var)
-            if len(bads) != 0:
-                raise KeyError("The following environment variables do not exist %s" % bads)
-            else:
-                self.buildJSON(json.loads(wf_str),instanceID)
                     
 
 	def buildJSON(self, config,instanceID=None):
@@ -177,8 +176,8 @@ if __name__ == "__main__":
 
 	wf = Workflow()
 	with args.workflow[0] as wfFH:
-                workflow_str = wfFH.read()
-		wf.buildJSON_env(workflow_str)
+                workflow_str = replace_env(wfFH.read())
+		wf.buildJSON(json.loads(workflow_str))
 
 	with args.input_file[0] as recordFH:
 		reader = FileReader(recordFH, args.d)

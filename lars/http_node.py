@@ -12,6 +12,7 @@ from tornado.ioloop import IOLoop
 
 import lars
 from lars.workflow import Workflow
+from lars.workflow import replace_env
 from lars.util import PeriodicTask
 
 def JSONDefault(obj):
@@ -202,7 +203,8 @@ if __name__ == '__main__':
 		lars.log.configure_json_stderr(args.loglevel)
 	workflow_config = None
 	if args.default_workflow != None:
-		workflow_config = json.loads(args.default_workflow.read())
+                wf_str = replace_env(args.default_workflow.read())
+		workflow_config = json.loads(wf_str)
 
 
 	#workflow_json = json.load(args.workflow.json[0])
