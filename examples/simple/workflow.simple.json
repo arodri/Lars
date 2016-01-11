@@ -1,0 +1,22 @@
+{
+	"workflow": {
+		"mappers": [
+			{
+				"class":"mapper.util.timer.StartTimer",
+				"name":"total_timer_start",
+				"outputField":"<%= ENV['STIMER'] %>"
+			},
+			{
+				"class":"mapper.util.timer.EndTimer",
+				"name":"total_timer_end",
+				"outputField":"TOTAL_TIME"
+			}
+		],
+		"outputters": [
+			{
+				"class":"outputter.DumpOutputter",
+				"outputFile":"-"
+			}
+		]
+	}
+}
