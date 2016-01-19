@@ -3,7 +3,6 @@ import importlib
 import sys
 import json
 import logging
-import sys
 import os
 import time
 import argparse
@@ -15,10 +14,16 @@ from lars import mapper
 from lars.outputter import *
 from lars.record import record
 from lars import log
-#todo- make class vars instead of strings
 #TODO: Name the workflows so that you can auto assign record_ids in a multi-threaded environment
 
 ENV_RE = re.compile("<%= ENV\[\'.+?\'\] %>")
+WORKFLOW_KEY = "workflow"
+MAPPERS_KEY= "mappers"
+EMBED_KEY = "embed"
+OUTPUTTERS_KEY="outputters"
+USE_OUTPUTTERS_KEY="include_outputters"
+KEEP_MAPPERS_KEY="keep_mappers"
+SKIP_MAPPERS_KEY="skip_mappers"
 
 def replace_env(wf_str):
     replacements = ENV_RE.findall(wf_str)
@@ -33,6 +38,7 @@ def replace_env(wf_str):
     if len(bads) != 0:
         raise KeyError("The following environment variables do not exist %s" % bads)
     return wf_str
+
 
 class Workflow(object):
 
@@ -49,17 +55,54 @@ class Workflow(object):
 			"applicationname":"lars"
 			}
 		self.logger = log.LarsLoggerAdapter(logger,self.context)
-                    
+
+        def proc_embed(self,wf,rep_env=True):
+            new_mappers = None
+            mappers = wf[WORKFLOW_KEY][MAPPERS_KEY]
+            outputters = wf[WORKFLOW_KEY].get(OUTPUTTERS_KEY,[])
+            has_embed = True
+            #run through until no more embedded mappers
+            while has_embed:
+                new_mappers = list(mappers)
+                has_embed = False
+                for i,config in enumerate(new_mappers):
+                    if config.has_key(EMBED_KEY) and not config.has_key("class"):
+                        #load the embedded mappers
+                        embedFH = open(config[EMBED_KEY],'r')
+                        embedWF =embedFH.read()
+                        embedFH.close()
+                        if rep_env:
+                            embedWF = replace_env(embedWF)
+                        embedWF = json.loads(embedWF)
+                        embed_mappers = embedWF[WORKFLOW_KEY][MAPPERS_KEY]
+                        #if config.has_key(KEEP_MAPPERS_KEY):
+                        #    keep = config[KEEP_MAPPERS_KEY]
+                        #    embed_mappers = filter(lambda map_config: map_config["name"] in keep, embed_mappers)
+                        #if config.has_key(SKIP_MAPPERS_KEY):
+                        #    skip = config[SKIP_MAPPERS_KEY]
+                        #    embed_mappers = filter(lambda map_config: map_config["name"] not in skip, embed_mappers)
+                        #put the new mappers in the list of mappers(in the right place)
+                        mappers = new_mappers[:i] + embed_mappers + new_mappers[i+1:]
+                        #put the embedded outputters at the end of the outputters list if asked
+                        if config.get(USE_OUTPUTTERS_KEY,False):
+                            outputters += embedWF[WORKFLOW_KEY].get(OUTPUTTERS_KEY,[])
+                        has_embed = True
+                        break
+            #not really necesarry but makes it clear
+            wf[WORKFLOW_KEY][MAPPERS_KEY] = mappers
+            wf[WORKFLOW_KEY][OUTPUTTERS_KEY] = outputters 
+ 
 
 	def buildJSON(self, config,instanceID=None):
-		self.context['workflow'] = instanceID
-		wf= config['workflow']
+		self.context[WORKFLOW_KEY] = instanceID
+		wf= config[WORKFLOW_KEY]
 		self.getRecordIDField = wf.get("get_recordID_field",None)
 		self.putRecordIDField = wf.get("put_recordID_field",None)
 		self.mappers = []
 		self.mapperDict = {}
 		try:
-			for mapperConfig in wf['mappers']:
+			for mapperConfig in wf[MAPPERS_KEY]:
+                                print mapperConfig
 				thisMap,skip = mapper.JSONMapperBuilder.buildFromJSON(mapperConfig, self.context)
 				if skip:
 					self.logger.info("skipping %s" % thisMap.name)
@@ -68,7 +111,7 @@ class Workflow(object):
 					self.mappers.append(mapperTup)
 					self.mapperDict[thisMap.name] = mapperTup
 					self.logger.info("Parsed %s" % thisMap.name)
-			for outConfig in wf.get('outputters',[]):
+			for outConfig in wf.get(OUTPUTTERS_KEY,[]):
 				#default outputter is delimited outputter
 				thisOutClass = DelimitedOutputter
 				if outConfig.has_key("class"):
@@ -165,23 +208,42 @@ if __name__ == "__main__":
 
 	parser = argparse.ArgumentParser(description='Simple single-threaded interface for running a workflow')
 
-	parser.add_argument('input_file', nargs=1, type=argparse.FileType('r'), help='Input file. Either delimited with a header OR 1-JSON-per-line')
+	parser.add_argument('input_file', nargs='?', default=[sys.stdin], type=argparse.FileType('r'), help='Input file. Either delimited with a header OR 1-JSON-per-line. If not provided then uses stdin')
 	parser.add_argument('workflow', nargs=1, type=argparse.FileType('r'), help='Workflow JSON configuration.')
 	parser.add_argument('--loglevel', metavar='LEVEL', choices=["INFO","DEBUG","WARNING","ERROR"], default='INFO', help='Logging level: %(choices)s (default: %(default)s)')
-	parser.add_argument('-d', default='|', metavar='DELIM', help='Input file delimiter. If the file is already JSON format (one line per record) specify "JSON". (default: %(default)s)')
-
+	parser.add_argument('-d', default='|', metavar='DELIM', help='Input file delimiter. If the file is already JSON format (one line per record) specify "JSON". (default: %(default)s)')   
+        parser.add_argument("--static", '-s',  action="count", help="Used to take a workflow and create a new static workflow which processes embedding and environment variables. If you specify once it will only replace embedding, if you specify more than once it will replace environment variables as well")
 	args = parser.parse_args()
 
 	log.configure_json_stderr(level=args.loglevel)
 
 	wf = Workflow()
 	with args.workflow[0] as wfFH:
-                workflow_str = replace_env(wfFH.read())
-		wf.buildJSON(json.loads(workflow_str))
-
-	with args.input_file[0] as recordFH:
-		reader = FileReader(recordFH, args.d)
-		for r in reader:
-			wf.logger.debug(wf.process(r))
+            wf_str = wfFH.read()
+    
+            print args.static
+            #this means dont actually run the workflow just print a simplified version
+            if args.static != None:
+                
+                if args.static > 1:
+                    rep_env = True
+                    wf_str = replace_env(wf_str)
+                else:
+                    rep_env = False
+                wf_json = json.loads(wf_str)
+                wf.proc_embed(wf_json,rep_env=rep_env)
+                sys.stdout.write(json.dumps(wf_json, sort_keys=True, indent=4, separators=(",",":")))
+            #actually run the workflow
+            else:
+               #replace environment variables prior to parsing as JSON
+                wf_str = replace_env(wf_str)
+                # fill out any embedded workflows
+                wf_json = json.loads(wf_str)
+                wf.proc_embed(wf_json)
+	        wf.buildJSON(wf_json)
+        	with args.input_file[0] as recordFH:
+        		reader = FileReader(recordFH, args.d)
+	        	for r in reader:
+		        	wf.logger.debug(wf.process(r))
 
 
