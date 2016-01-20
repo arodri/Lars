@@ -93,7 +93,9 @@ class Workflow(object):
             wf[WORKFLOW_KEY][OUTPUTTERS_KEY] = outputters 
  
 
-	def buildJSON(self, config,instanceID=None):
+	def buildJSON(self, config,instanceID=None,use_embed=True):
+                if use_embed:
+                    self.proc_embed(config)
 		self.context[WORKFLOW_KEY] = instanceID
 		wf= config[WORKFLOW_KEY]
 		self.getRecordIDField = wf.get("get_recordID_field",None)
@@ -239,7 +241,6 @@ if __name__ == "__main__":
                 wf_str = replace_env(wf_str)
                 # fill out any embedded workflows
                 wf_json = json.loads(wf_str)
-                wf.proc_embed(wf_json)
 	        wf.buildJSON(wf_json)
         	with args.input_file[0] as recordFH:
         		reader = FileReader(recordFH, args.d)

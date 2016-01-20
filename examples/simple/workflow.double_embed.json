@@ -1,0 +1,29 @@
+{
+	"workflow": {
+		"mappers": [
+
+                        {
+                                "embed": "workflow.embed.json",
+                                "include_outputters": true,
+                                "skip_mappers": ["embed_start_timer"],
+                                "name": "embed embed"
+                        },
+			{
+				"class":"mapper.util.timer.StartTimer",
+				"name":"double_embed_start_timer",
+				"outputField":"START_TIME_0"
+			},
+			{
+				"class":"mapper.util.timer.EndTimer",
+				"name":"double_embed_end_timer",
+				"outputField":"TOTAL_TIME_0"
+			}
+		],
+		"outputters": [
+			{
+				"class":"outputter.DumpOutputter",
+				"outputFile":"double_embed.out.dump"
+			}
+		]
+	}
+}

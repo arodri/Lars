@@ -1,0 +1,28 @@
+{
+	"workflow": {
+		"mappers": [
+
+			{
+				"class":"mapper.util.timer.StartTimer",
+				"name":"embed_start_timer",
+				"outputField":"START_TIME_1"
+			},
+
+                        {
+                                "embed": "workflow.simple.json",
+                                "name": "embed simple"
+                        },
+			{
+				"class":"mapper.util.timer.EndTimer",
+				"name":"embed_end_timer",
+				"outputField":"TOTAL_TIME_1"
+			}
+		],
+		"outputters": [
+			{
+				"class":"outputter.DumpOutputter",
+				"outputFile":"embed.out.dump"
+			}
+		]
+	}
+}
