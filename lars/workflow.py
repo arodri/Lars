@@ -223,7 +223,7 @@ if __name__ == "__main__":
 	with args.workflow[0] as wfFH:
             wf_str = wfFH.read()
     
-            print args.static
+            #print args.static
             #this means dont actually run the workflow just print a simplified version
             if args.static != None:
                 
