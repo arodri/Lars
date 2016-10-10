@@ -117,7 +117,9 @@ class Workflow(object):
 				#default outputter is delimited outputter
 				thisOutClass = DelimitedOutputter
 				if outConfig.has_key("class"):
-					module_name,class_name = outConfig["class"].split(".")
+					parsed_class_path = outConfig["class"].split(".")
+					module_name,class_name = ('.'.join(parsed_class_path[:-1]), parsed_class_path[-1])
+
 					thisMod= importlib.import_module(module_name)
 					thisOutClass = getattr(thisMod,class_name)
 				thisOut = thisOutClass()
