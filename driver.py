@@ -22,7 +22,9 @@ class Driver(object):
 		loglevel,
 		input_file, delim, 
 		num_feeders, batch_size, queue_size,
-		output_file):
+		output_file,
+		logdir="logs",
+		outputdir="output",):
 
 		self.haproxies = []
 		self.varnodes = []
@@ -44,6 +46,9 @@ class Driver(object):
 		self.queue_size = queue_size
 
 		self.output_file = output_file
+
+		self.logdir = logdir
+		self.outputdir = outputdir
 
 		self.logger = logging.getLogger('Driver')
 
@@ -86,7 +91,7 @@ class Driver(object):
 
 	def start_feeder(self):
 		log_file_str = "default"
-		with open('logs/feeder.%s.out' % log_file_str, 'ab') as out, open('logs/feeder.%s.err' % log_file_str, 'ab') as err:
+		with open('%s/feeder.%s.out' % (self.logdir, log_file_str), 'ab') as out, open('%s/feeder.%s.err' % (self.logdir, log_file_str), 'ab') as err:
 			cmd_str = """python %(LARSDIR)s/lars/feeder.py
 				--var_uri=%(var_uri)s
 				--log=%(feeder_log)s
@@ -99,7 +104,7 @@ class Driver(object):
 			cmd_str = cmd_str % {
 				"LARSDIR":LARSDIR,
 				"var_uri":"http://localhost:%s/lars/default" % self.haproxy_var_port,
-				"feeder_log":"logs/feeder.%s.log" % log_file_str,
+				"feeder_log":"%s/feeder.%s.log" % (logdir, log_file_str),
 				"output_file":self.output_file,
 				"loglevel":self.loglevel,
 				"numfeeders":self.num_feeders,
@@ -131,23 +136,24 @@ class Driver(object):
 	def start_haproxy(self, haproxy_port, var_proxy_port, var_ports):
 		var_nodes = zip(["var%s" % port for port in var_ports ], var_ports)
 		with open('%s/config/haproxy.jinja2.cfg' % LARSDIR, 'r') as cfg_template:
-			with open('logs/haproxy.cfg', 'w') as cfg:
+			with open('%s/haproxy.cfg' % self.logdir, 'w') as cfg:
 				template = Template(cfg_template.read())
 				cfg.write(template.render(stats_port=haproxy_port, var_proxy_port=var_proxy_port, var_nodes=var_nodes))
-		cmd_str = "haproxy -f logs/haproxy.cfg"
+		cmd_str = "haproxy -f %s/haproxy.cfg" % self.logdir
 		self.logger.debug(cmd_str)
 		cmd = shlex.split(cmd_str)
-		with open('logs/haproxy.out','ab') as out, open('logs/haproxy.err', 'ab') as err:
+		with open('%s/haproxy.out' % self.logdir,'ab') as out, open('%s/haproxy.err' % self.logdir, 'ab') as err:
 			return Popen(cmd, stdout=out, stderr=err)
 	
 	def start_varnode(self, port, loglevel, workflow_config):
-		with open('logs/http.node.%s.out' % port, 'ab') as out, open('logs/http.node.%s.err' % port, 'ab') as err:
+		with open('%s/http.node.%s.out' % (self.logdir, port), 'ab') as out, open('%s/http.node.%s.err' % (self.logdir, port), 'ab') as err:
 			cmd_str = ("""python %(LARSDIR)s/lars/http_node.py 
 				--http_port=%(port)s 
-				--log=logs/http.node.%(port)s.log 
+				--log=%(logdir)s/http.node.%(port)s.log 
 				--loglevel=%(loglevel)s
 				--default_workflow=%(workflow)s""").replace('\n', ' ').replace('\t','')
 			cmd_str = cmd_str % {
+				'logdir':self.logdir,
 				'LARSDIR':LARSDIR,
 				'port':port, 
 				'loglevel':loglevel,
@@ -219,6 +225,9 @@ if __name__ == '__main__':
 
 	parser.add_argument('--loglevel', metavar='LEVEL', choices=['INFO','DEBUG'], default='INFO', help='Logging level: %(choices)s (default: %(default)s)')
 	
+	parser.add_argument('--logdir', metavar='DIR', default='logs', help='Logging output dir')
+	parser.add_argument('--outputdir', metavar='DIR', default='output', help='An output directory')
+
 	group = parser.add_argument_group('Input data')
 	group.add_argument('--input_file', metavar='FILE', default=None, type=argparse.FileType('r'), help="Optional input file. (default: %(default)s")
 	group.add_argument('--delim', metavar='CHAR', default='|', help="Input file delimiter. Use 'JSON' for files with single-line json. (default: %(default)s")
@@ -247,6 +256,9 @@ if __name__ == '__main__':
 
 	var_ports =  [ args['var_start_port']+i  for i in range(args['num_var_nodes'])  ]
 
+	logdir = args.get("logdir", "logs")
+	outputdir = args.get("outputdir", "output")
+
 	driver = Driver(
 		args['workflow.json'][0],
 		args['haproxy_stat_port'], 
@@ -258,13 +270,15 @@ if __name__ == '__main__':
 		args['num_feeders'],
 		args['batch_size'],
 		args['queue_size'],
-		args['output_file']
+		args['output_file'],
+		logdir=logdir,
+		outputdir=outputdir,
 	)
 
-	if not os.path.exists('logs'):
-		os.makedirs('logs')
-	if not os.path.exists('output'):
-		os.makedirs('output')
+	if not os.path.exists(logdir):
+		os.makedirs(logdir)
+	if not os.path.exists(outputdir):
+		os.makedirs(outputdir)
 
 	driver.start_all()
 	
