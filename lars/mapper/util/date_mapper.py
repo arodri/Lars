@@ -1,14 +1,16 @@
 from lars.mapper import Mapper
 from datetime import datetime as dt
+from datetime import date
 class ObsDateMapper(Mapper):
 
 	def loadConfigJSON(self,config):
-		self.dateField = config.get("inputDate", "observationDate")
-		self.linksets = config.get("linksetsName", None)
-		self.obsDateOutput = config["obsDateField"]
+		self.recordField = config.get("inputDate", None)
+		self.obsDateOutput = config.get("obsDateField",self.recordField)
 		self.obsDateFmt = config.get("obsDateFormat","%Y%m%d")
-		self.skipRecord = config.get("skipRecord",False)
-		
+		self.linksets = config.get("linksetsName", None)
+		self.linksetField = config.get("linksetInputDate",None)
+		self.linksetDateOutput= config.get("linksetDateField",self.linksetField)
+
 		self.cache = {}
 
 
@@ -21,15 +23,32 @@ class ObsDateMapper(Mapper):
 			return date
 
 	def process(self,record):
-		if not self.skipRecord:
-			record[self.obsDateOutput] = self.parseDate(record[self.dateField])
+		if self.recordField != None:
+			record[self.obsDateOutput] = self.parseDate(record[self.recordField])
 		if self.linksets != None:
-			for lsName,ls in record[self.linksets].items():
-				if ls != None:
-					for rec in ls:
-						rec[self.obsDateOutput] = self.parseDate(rec[self.dateField])
+			for linkset in self.linksets:
+				if record[linkset] is not None:
+					for link in record[linkset]:
+						link[self.linksetDateOutput] = self.parseDate(link[self.linksetField])
 		return record
-			
-			
 
 
+
+class DatetimeToDateMapper(Mapper):
+
+	def loadConfigJSON(self,config):
+		self.datetimeField = config.get("recordDatetimeField",None)
+		self.dateOutput = config.get("recordDateField",self.datetimeField)
+		self.linksets = config.get("linksetsName", None)
+		self.linksetDatetimeField = config.get("linksetDatetimeField",None)
+		self.linksetDateOutput = config.get("linksetDateField",self.linksetDatetimeField)
+
+	def process(self,record):
+		if self.datetimeField != None:
+			record[self.dateOutput] = record[self.datetimeField].date()
+		if self.linksets != None:
+			for linkset in self.linksets:
+				if record[linkset] is not None:
+					for link in record[linkset]:
+						link[self.linksetDateOutput] = link[self.linksetDatetimeField].date()
+		return record
