@@ -117,7 +117,9 @@ class Workflow(object):
 				#default outputter is delimited outputter
 				thisOutClass = DelimitedOutputter
 				if outConfig.has_key("class"):
-					module_name,class_name = outConfig["class"].split(".")
+					parsed_class_path = outConfig["class"].split(".")
+					module_name,class_name = ('.'.join(parsed_class_path[:-1]), parsed_class_path[-1])
+
 					thisMod= importlib.import_module(module_name)
 					thisOutClass = getattr(thisMod,class_name)
 				thisOut = thisOutClass()
@@ -223,7 +225,7 @@ if __name__ == "__main__":
 	with args.workflow[0] as wfFH:
             wf_str = wfFH.read()
     
-            print args.static
+            #print args.static
             #this means dont actually run the workflow just print a simplified version
             if args.static != None:
                 
