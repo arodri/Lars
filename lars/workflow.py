@@ -8,6 +8,7 @@ import time
 import argparse
 import socket
 import re
+import statsd
 
 from feeder import FileReader
 from lars import mapper 
@@ -21,6 +22,9 @@ WORKFLOW_KEY = "workflow"
 MAPPERS_KEY= "mappers"
 EMBED_KEY = "embed"
 OUTPUTTERS_KEY="outputters"
+METRICS_KEY="metrics"
+MC_HOST="statsd_host"
+MC_HOST_PORT="statsd_port"
 USE_OUTPUTTERS_KEY="include_outputters"
 KEEP_MAPPERS_KEY="keep_mappers"
 SKIP_MAPPERS_KEY="skip_mappers"
@@ -128,6 +132,21 @@ class Workflow(object):
 					self.mappers[-1][1].append(thisOut)
 				else:
 					self.mapperDict[thisOut.after][1].append(thisOut)
+                        self.metrics_collector = None
+                        if wf.has_key(METRICS_KEY):
+                            #create statsd connection
+                            metrics = wf[METRICS_KEY]
+                            #TODO:maybe change this to the workflow name once such a thing exists
+                            mc_prefix = metrics["metrix_prefix"]
+                            self.metrics_collector = statsd.StatsClient(metrics[MC_HOST],metrics[MC_HOST_PORT],prefix=mc_prefix)
+                            #set which mapper names to collect on, if key is missing then will collect on all
+                            if metrics.has_key("mapper_names"):
+                                self.metrics_mappers = metrics["mapper_names"]
+                                for name in self.metrics_mappers:
+                                    if not self.mapperDict.has_key(name):
+                                        raise mapper.MapperConfigurationException("No such mapper %s" % name)
+                            else:
+                                self.metrics_mappers = self.mapperDict.keys()
 		except mapper.MapperConfigurationException, e:
 			self.logger.error(e)
 			sys.exit(1)
@@ -188,6 +207,10 @@ class Workflow(object):
 			for outputter in outputters:
 				outputter.output(thisRec)
 			i+=1
+                if self.metrics_collector != None:
+                    for mapper in self.metrics_mappers:
+                        self.metrics_collector.timing(mapper,thisRec["%s_TIMER" % mapper])
+                    self.metrics_collector.timing("TOTAL_TIME",thisRec["TOTAL_TIME"])
 		#increment the processed records
 		self.numProc+=1
 		dur = (time.time()-start)*1000
