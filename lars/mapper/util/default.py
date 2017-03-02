@@ -24,3 +24,13 @@ class DefaultByInput(Mapper):
 					record[field] = config["default_value"]
 		return record
 
+class Static(Mapper):
+
+    def loadConfigJSON(self,config):
+            self.defaults = config["statics"]
+
+    def process(self,record):
+        for static_var in self.defaults:
+            record[static_var["field"]] = static_var["value"]
+        return record
+
