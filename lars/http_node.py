@@ -60,12 +60,12 @@ class WorkflowWrapper:
 
 	def process(self, record):
 		start = time.time()
-		self.st_lock.acquire()
 		resp = self._workflow.process(record)
-		self.st_lock.release()
 		end = time.time()
 
+		self.st_lock.acquire()
 		self.updateCounts((end-start)*1000)
+		self.st_lock.release()
 		return resp
 		
 	def updateCounts(self, ms):

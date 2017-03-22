@@ -1,6 +1,7 @@
 import time
 import importlib
 import logging
+import threading
 from lars import log
 
 class Mapper:
@@ -35,6 +36,7 @@ class Mapper:
 		self.skip = config.get("skip",False)
 
 	def processWrapper(self, record, timing=True, error=True):
+		self.lock.acquire()
 		start = time.time()
 		self.logger.setContext(record.context)
 		#self.context["record"] = record
@@ -45,10 +47,12 @@ class Mapper:
 			self.logger.error('MapperError: %s' % self.name)
 			self.logger.exception(e)
 			if error:
+				self.lock.release()
 				raise
 		end = time.time()
 		if timing:
 			record["%s_TIMER" % self.name] = (end-start)*1000
+		self.lock.release()
 		return record
 	
 	def stop(self):
@@ -86,6 +90,7 @@ class JSONMapperBuilder(MapperBuilder):
 		thisMapClass = getattr(thisMod, class_name)
 		thisMap = thisMapClass()
 		thisMap.initJSON(config)
+		thisMap.lock = threading.RLock()
 		skip = thisMap.skip
 		if not skip:
 			thisMap.initLogger(ctx)
