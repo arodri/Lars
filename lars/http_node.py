@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import argparse, sys, time
+import argparse, sys, time, re
 import logging, os
 import json
 import threading
@@ -9,11 +9,24 @@ from threading import RLock
 import tornado
 from tornado.web import RequestHandler, Application, url
 from tornado.ioloop import IOLoop
+import tornado.wsgi
 
 import lars
 from lars.workflow import Workflow
 from lars.workflow import replace_env
 from lars.util import PeriodicTask
+
+def wsgi(default_workflow):
+    return wsgimulti([('default', default_workflow)])
+ 
+def wsgimulti(workflows):
+    loglevel = os.environ.get("LOGLEVEL", "INFO")
+    lars.log.configure_json_stderr(loglevel)
+    manager = NewWorkflowManager(workflows, 0)
+    server = HTTPWorkflowServer(0, manager)
+    return server.wsgi()
+
+
 
 def JSONDefault(obj):
 	import datetime
@@ -92,7 +105,7 @@ class WorkflowWrapper:
 
 
 class WorkflowManager:
-	def __init__(self):
+	def __init__(self, wokflows=[]):
 		self._workflows = {}
 	
 	def exists(self, name):
@@ -115,6 +128,26 @@ class WorkflowManager:
 	def workflowSummary(self,name):
 		return self._workflows[name].getStats()
 
+def NewWorkflowManager(workflows, port):
+    names = set([])
+    manager = WorkflowManager()
+    name_re_str = r'^([a-zA-Z0-9-_]+)$'
+    name_re = re.compile(name_re_str)
+    for (name, wfpath) in workflows:
+        if not name_re.match(name):
+            raise Exception("invalid name format: %s, must be: %s" % (name, name_re_str))
+        if name in names:
+            raise Exception("names must be unique: %s" % name)
+        if not os.path.isfile(wfpath):
+            raise Exception("unable to find wokflow: %s" % wfpath)
+        names.add(name)
+
+    for (name, wfpath) in workflows:
+        with open(wfpath, 'r') as wf_fh:
+            config_str = replace_env(wf_fh.read())
+            config = json.loads(config_str)
+            manager.add(name, config, port)
+    return manager
 
 class WorkflowHandler(tornado.web.RequestHandler):
 	
@@ -166,23 +199,25 @@ class HeartBeatHandler(tornado.web.RequestHandler):
 		self.write('OK')
 
 class HTTPWorkflowServer(object):
-	def __init__(self, port, workflow=None):
+	def __init__(self, port, wf_manager):
 		self.logger = logging.getLogger('lars.HTTPWorkflowServer')
 		self.logger.info('Configuring web server')
 		
-		self.wf_manager = WorkflowManager()
-		if workflow != None:
-			self.wf_manager.add('default',workflow,port)
-
+		self.wf_manager = wf_manager
 		self.app = Application([
 			url(r"/$", HeartBeatHandler),
 			url(r"/lars", WorkflowHandler, dict(workflow_manager=self.wf_manager, serviceID=port)),
-			url(r"/lars/([a-zA-Z0-9]+)$", WorkflowHandler, dict(workflow_manager=self.wf_manager, serviceID=port))
+			url(r"/lars/([a-zA-Z0-9-_]+)$", WorkflowHandler, dict(workflow_manager=self.wf_manager, serviceID=port))
 		])
-		self.app.listen(port)
+                self.port = port
 
 	def start(self):
+		self.app.listen(self.port)
 		IOLoop.current().start()
+
+	def wsgi(self):
+		return tornado.wsgi.WSGIAdapter(self.app)
+
 
 if __name__ == '__main__':
 
@@ -193,7 +228,8 @@ if __name__ == '__main__':
 	parser.add_argument('--log', metavar='FILE', default=None, help='Log file. (default: STDOUT)')
 	parser.add_argument('--loglevel', metavar='LEVEL', choices=["INFO","DEBUG","WARNING","ERROR"], default='INFO', help='Logging level: %(choices)s (default: %(default)s)')
 	parser.add_argument('--http_port', metavar='PORT', default=9000, type=int, help='HTTP port to listen on. (default: %(default)s')
-	parser.add_argument('--default_workflow', metavar='JSON_FILE', default=None, type=argparse.FileType('r'), help='Workflow to put on lars/default. Useful for running on commandline')
+	parser.add_argument('--default_workflow', metavar='JSON_FILE', default=None, type=str, help='Workflow to put on lars/default. Useful for running on commandline')
+        parser.add_argument('-w', '--workflow', metavar=('NAME', 'FILE_PATH'), default=[], action='append', nargs=2, help='Supply a pair of NAME and workflow FILE_PATH. Example: -w test-v1 ./workflow.json (will spin up ./workflow.json at /lars/test-v1)')
 
 	args = parser.parse_args()
 
@@ -201,14 +237,16 @@ if __name__ == '__main__':
 		lars.log.configure_json_file(args.log, level=args.loglevel)
 	else:
 		lars.log.configure_json_stderr(args.loglevel)
-	workflow_config = None
-	if args.default_workflow != None:
-                wf_str = replace_env(args.default_workflow.read())
-		workflow_config = json.loads(wf_str)
 
+        names = set([])
+        workflows = args.workflow
+        if args.default_workflow != None:
+            workflows = [('default', args.default_workflow)] + workflows
 
-	#workflow_json = json.load(args.workflow.json[0])
-	#args,workflow.json[0].close()
-
-	server = HTTPWorkflowServer(args.http_port, workflow_config)
+        try:
+            manager = NewWorkflowManager(workflows, args.http_port)
+        except Exception as e:
+            print "error: %s" % e
+            sys.exit(1)
+	server = HTTPWorkflowServer(args.http_port, manager)
 	server.start()
