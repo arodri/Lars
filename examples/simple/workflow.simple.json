@@ -8,16 +8,17 @@
 				"outputField":"START_TIME"
 			},
 			{
+				"class":"mapper.util.sleep.Sleep",
+				"name":"sleep",
+				"sleep": 0.02
+			},
+			{
 				"class":"mapper.util.timer.EndTimer",
 				"name":"end_timer",
 				"outputField":"TOTAL_TIME"
 			}
 		],
 		"outputters": [
-			{
-				"class":"outputter.DumpOutputter",
-				"outputFile":"simple.out.dump"
-			}
 		]
 	}
 }
