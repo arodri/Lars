@@ -8,7 +8,7 @@ class DatedCrosstabMapper(Mapper):
 	def loadConfigJSON(self,config):
 		self.durs = config['durations']
 		self.tdDurs = dict([(dur,timedelta(days=dur)) for dur in self.durs])
-		self.diffFields = config['diffFields']
+		self.diffFields = config.get('diffFields',None)
 		self.setFields = dict([(field,set()) for field in self.diffFields])
 		self.recordLists = config['recordLists']
 		self.recordObsDate = config['obsDatetimeField']
