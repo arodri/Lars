@@ -38,7 +38,7 @@ class SQLAlchemyDBWrapper(DBWrapper):
 		while attempts < self.max_attempts:
 			try:
 				return self._cnx_pool.execute(query,params)
-			except sqlalchemy.exc.DBAPIError,e:
+			except sqlalchemy.exc.DBAPIError as e:
 				attempts += 1
 				log = logging.getLogger()
 				logging.warning("DB Connection Failed: waiting %s seconds then retrying" % delay)
@@ -58,7 +58,7 @@ class SQLAlchemyDBWrapper(DBWrapper):
 			resultData = results.fetchall()
 			rtime = (time.time() - rstart)*1000
 
-			result_dicts = [ dict(zip(r.keys(), r.values())) for r in resultData]
+			result_dicts = [ dict(list(zip(list(r.keys()), list(r.values())))) for r in resultData]
 		else:
 			result_dicts = []
 			rtime = 0.0

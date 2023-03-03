@@ -15,7 +15,7 @@ class ResponseMapper(Mapper):
 
 	def process(self, record):
 		response = {}
-		for (responseName,recordName) in self.fieldMapping.items():
+		for (responseName,recordName) in list(self.fieldMapping.items()):
 			response[responseName] = record[recordName]
 		return response
 

@@ -7,8 +7,5 @@ class Sleep(Mapper):
 		self.sleep = float(config["sleep"])
 
 	def process(self,record):
-                time.sleep(self.sleep)
+		time.sleep(self.sleep)
 		return record
-
-
-

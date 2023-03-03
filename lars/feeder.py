@@ -12,7 +12,7 @@ import json
 
 import multiprocessing as mt
 #from http_node import PeriodicTask
-from Queue import Empty
+from queue import Empty
 
 class FileReader():
 	def __init__(self, input_file, delim):
@@ -27,17 +27,14 @@ class FileReader():
 	def __iter__(self):
 		return self
 
-	def next(self):
-		r = self._reader.next()
+	def __next__(self):
+		r = next(self._reader)
 		j = {}
 		if self.is_json:
 			j = json.loads(r)
 		else:
 			j = r
 		return j
-
-	def __next__(self):
-		return self.next()
 
 	def close(self):
 		self._input_file.close()
@@ -84,7 +81,7 @@ class Feeder(mt.Process):
 						self.output_file.write('%s\n' % json.dumps(resp.json()))
 						self.output_file.flush()
 
-				except requests.exceptions.Timeout,e:
+				except requests.exceptions.Timeout as e:
 					self.logger.warning("RequestTimeout exceded. Retry %s of 3" % attempts)
 					attempts += 1
 					if attempts < 3:
@@ -94,7 +91,7 @@ class Feeder(mt.Process):
 					else:
 						self.q.task_done()
 						self.logger.exception(e)
-				except Exception,e:
+				except Exception as e:
 					self.logger.exception(e)
 			self.q.task_done()
 

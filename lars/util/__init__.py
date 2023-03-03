@@ -1,1 +1,1 @@
-from periodic_task import *
+from .periodic_task import *

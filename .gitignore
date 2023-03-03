@@ -13,3 +13,7 @@ output/*
 
 # tmp files
 *.swp
+
+# environments
+.venv
+.vscode

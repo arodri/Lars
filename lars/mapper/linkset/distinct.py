@@ -6,7 +6,7 @@ class MapDistinct(Mapper):
 		self.record_lists = config["record_lists"]
 
 		self.dict_factory = make_distinct_dict_factory(self.record_lists, self.distinct_fields)
-		self.provides = [ "%s_DISTINCT_%s" % (rl, f) for (rl,f) in self.dict_factory().keys() ]
+		self.provides = [ "%s_DISTINCT_%s" % (rl, f) for (rl,f) in list(self.dict_factory().keys()) ]
 
 	def process(self,record):
 		# dict to hold the histogram
@@ -18,7 +18,7 @@ class MapDistinct(Mapper):
 						mapped[(rl,f)][rl_rec[f]] = mapped[(rl,f)].get(rl_rec[f],0) + 1
 		for rl in self.record_lists:
 			for f in self.distinct_fields:
-				record["%s_DISTINCT_%s" % (rl,f)] = mapped[(rl,f)].items()
+				record["%s_DISTINCT_%s" % (rl,f)] = list(mapped[(rl,f)].items())
 		return record
 
 class DistinctCount(Mapper):
@@ -31,7 +31,7 @@ class DistinctCount(Mapper):
 		self.missing_value = config.get("missing_value", -1)
 		
 		self.dict_factory = make_distinct_dict_factory(self.record_lists, self.distinct_fields)
-		self.provides = [ "%s_uniq_%s" % (rl, f) for (rl,f) in self.dict_factory().keys() ]
+		self.provides = [ "%s_uniq_%s" % (rl, f) for (rl,f) in list(self.dict_factory().keys()) ]
 
 	def process(self,record):
 		unique_vals = self.dict_factory()
@@ -50,7 +50,7 @@ class DistinctCount(Mapper):
 		for rl in self.record_list:
 			missing = record[rl] == None
 			for f in self.distinct_fields:
-				record["%s_uniq_%s" % (rl, f)] = self.missing_value if missing else len(unique_vals[(rl,f)].keys())
+				record["%s_uniq_%s" % (rl, f)] = self.missing_value if missing else len(list(unique_vals[(rl,f)].keys()))
 		return record
 
 class DistinctCountVariables(Mapper):
@@ -58,16 +58,16 @@ class DistinctCountVariables(Mapper):
 		self.record_lists = config["record_lists"]
 		self.field_values = config["field_values"] # {"field":[...values...]}
 		self.missing_value = config.get("missing_value",-1)
-		self.fields = self.field_values.keys()
-		self.dict_factory = make_distinct_dict_factory(self.record_lists, self.field_values.keys())
+		self.fields = list(self.field_values.keys())
+		self.dict_factory = make_distinct_dict_factory(self.record_lists, list(self.field_values.keys()))
 
-		for (field,values) in self.field_values.items():
+		for (field,values) in list(self.field_values.items()):
 			self.field_values[field] = set(values)
 
 	def process(self, record):
 		unique_vals = self.dict_factory()
 		for rl in self.record_lists:
-			for (f,values) in self.field_values.items():
+			for (f,values) in list(self.field_values.items()):
 				unique_vals[(rl,f)] = dict([ (v,0) for v in values ])
 
 		for rl in self.record_lists:
@@ -77,8 +77,8 @@ class DistinctCountVariables(Mapper):
 						v = rl_rec[f]
 						if v in self.field_values[f]:
 							unique_vals[(rl,f)][v] += 1
-		for ((rl,field),values) in unique_vals.items():
-			for (value,cnt) in values.items():
+		for ((rl,field),values) in list(unique_vals.items()):
+			for (value,cnt) in list(values.items()):
 				record["%s_field_%s_value_%s_cnt" % (rl,field,value)] = self.missing_value if record[rl] == None else cnt
 		return record
 

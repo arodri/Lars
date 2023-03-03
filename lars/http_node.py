@@ -100,7 +100,7 @@ class WorkflowWrapper:
 		self.total_served += 1
 
 	def getStats(self):
-		return dict(self.tps.items() + [('total_served',self.total_served),('resp_100',self.response_100),('resp_1000',self.response_1000),('resp_10000',self.response_10000)])
+		return dict(list(self.tps.items()) + [('total_served',self.total_served),('resp_100',self.response_100),('resp_1000',self.response_1000),('resp_10000',self.response_10000)])
 
 
 
@@ -123,7 +123,7 @@ class WorkflowManager:
 		return self._workflows[name].process(data)
 
 	def summary(self):
-		return { 'workflows':self._workflows.keys(), 'stats': dict([ (w.name, w.getStats()) for w in self._workflows.values() ]) }
+		return { 'workflows':list(self._workflows.keys()), 'stats': dict([ (w.name, w.getStats()) for w in list(self._workflows.values()) ]) }
 
 	def workflowSummary(self,name):
 		return self._workflows[name].getStats()
@@ -209,7 +209,7 @@ class HTTPWorkflowServer(object):
 			url(r"/lars", WorkflowHandler, dict(workflow_manager=self.wf_manager, serviceID=port)),
 			url(r"/lars/([a-zA-Z0-9-_]+)$", WorkflowHandler, dict(workflow_manager=self.wf_manager, serviceID=port))
 		])
-                self.port = port
+		self.port = port
 
 	def start(self):
 		self.app.listen(self.port)
@@ -229,7 +229,7 @@ if __name__ == '__main__':
 	parser.add_argument('--loglevel', metavar='LEVEL', choices=["INFO","DEBUG","WARNING","ERROR"], default='INFO', help='Logging level: %(choices)s (default: %(default)s)')
 	parser.add_argument('--http_port', metavar='PORT', default=9000, type=int, help='HTTP port to listen on. (default: %(default)s')
 	parser.add_argument('--default_workflow', metavar='JSON_FILE', default=None, type=str, help='Workflow to put on lars/default. Useful for running on commandline')
-        parser.add_argument('-w', '--workflow', metavar=('NAME', 'FILE_PATH'), default=[], action='append', nargs=2, help='Supply a pair of NAME and workflow FILE_PATH. Example: -w test-v1 ./workflow.json (will spin up ./workflow.json at /lars/test-v1)')
+	parser.add_argument('-w', '--workflow', metavar=('NAME', 'FILE_PATH'), default=[], action='append', nargs=2, help='Supply a pair of NAME and workflow FILE_PATH. Example: -w test-v1 ./workflow.json (will spin up ./workflow.json at /lars/test-v1)')
 
 	args = parser.parse_args()
 
@@ -238,15 +238,14 @@ if __name__ == '__main__':
 	else:
 		lars.log.configure_json_stderr(args.loglevel)
 
-        names = set([])
-        workflows = args.workflow
-        if args.default_workflow != None:
-            workflows = [('default', args.default_workflow)] + workflows
-
-        try:
-            manager = NewWorkflowManager(workflows, args.http_port)
-        except Exception as e:
-            print "error: %s" % e
-            sys.exit(1)
+		names = set([])
+		workflows = args.workflow
+		if args.default_workflow != None:
+			workflows = [('default', args.default_workflow)] + workflows
+		try:
+			manager = NewWorkflowManager(workflows, args.http_port)
+		except Exception as e:
+			print(("error: %s" % e))
+			sys.exit(1)
 	server = HTTPWorkflowServer(args.http_port, manager)
 	server.start()

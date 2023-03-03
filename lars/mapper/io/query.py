@@ -37,7 +37,7 @@ class SQLMapper(mapper.Mapper):
 			with open(self.queryFile,'r') as qf:
 				self.queryString = qf.read()
 		self.logger.info("Testing query string subsitutions")
-		p_dict = dict(zip(self.parameters,self.parameters))
+		p_dict = dict(list(zip(self.parameters,self.parameters)))
 		if self.batched_parameter != None:
 			p_dict[self.batched_parameter] = self.batched_parameter
 		self.queryString % p_dict
@@ -60,7 +60,7 @@ class SQLMapper(mapper.Mapper):
 			q_time += dur
 			results += r
 		else:
-			values = filter(lambda v: not (self.batched_parameter not in self.skip_values and v in self.skip_values[self.batched_parameter]), record[self.batched_parameter])
+			values = [v for v in record[self.batched_parameter] if not (self.batched_parameter not in self.skip_values and v in self.skip_values[self.batched_parameter])]
 			self.logger.debug(values)
 			if len(values) == 0:
 				return record

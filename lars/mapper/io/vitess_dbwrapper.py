@@ -54,7 +54,7 @@ class VitessDBWrapper(DBWrapper):
 		cursor.close()
 		conn.close()
 		rtime = (time.time() - start)*1000
-		result_dicts = [ dict(zip(keys, values)) for values in resultData ]
+		result_dicts = [ dict(list(zip(keys, values))) for values in resultData ]
 
 		return result_dicts, qtime, rtime
 

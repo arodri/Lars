@@ -16,7 +16,7 @@ class LinkageCrosstab(Mapper):
 		cutOffDates = {}
 		for dur in self.durs:
 			cutOffDates[dur] = obs-self.tdDurs[dur]
-		for (lsName,ls) in record[self.linksets].items():
+		for (lsName,ls) in list(record[self.linksets].items()):
 			durLS = {}
 			for dur in self.durs:
 				thisSets = dict(self.setFields)

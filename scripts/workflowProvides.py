@@ -7,14 +7,14 @@ def getProvides(config):
 	wf.buildJSON(config)
 	res = {}
 	for mapper,_ in wf.mappers:
-		print mapper
+		print(mapper)
 		res[mapper.name] = mapper.provides
 	return res
 	
 
 
 res =  getProvides(json.load(sys.stdin))
-print json.dumps(res,indent=4, separators=(",", ":"))
+print(json.dumps(res,indent=4, separators=(",", ":")))
 
 
 

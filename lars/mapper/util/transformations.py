@@ -62,7 +62,7 @@ class ConstantMapper(Mapper):
 		self.overwrite = config.get("overwrite", True)
 
 	def process(self,record):
-		for key,val in self.map.items():
+		for key,val in list(self.map.items()):
 			if self.overwrite or key not in record:
 				record[key] = val
 		return record

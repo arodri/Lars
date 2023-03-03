@@ -37,10 +37,10 @@ class DelimitedOutputter(Outputter):
 		self.fields = []
 		fieldNames = []
 		#check to ensure has a fmtFile or list of fields
-		if config.has_key(DelimitedOutputter._FMTFILE):
+		if DelimitedOutputter._FMTFILE in config:
 			with open(config[DelimitedOutputter._FMTFILE]) as fmtFH:
 				fieldNames = [ line.strip() for line in fmtFH]
-		elif config.has_key(DelimitedOutputter._FIELD_NAMES):
+		elif DelimitedOutputter._FIELD_NAMES in config:
 			fieldNames = [field for field in config[DelimitedOutputter._FIELD_NAMES]]
 		else:
 			raise OutputterConfigurationException("Needs to have either"+_FMTFILE + "or " +_FIELD_NAMES)
@@ -97,8 +97,8 @@ class ListOutputter(Outputter):
 	_OUTPUT_FILE="outputFile"
 	_STDOUT="-"
 	_FIELD_NAMES="fields"
-        _LIST_FIELD_NAMES="listFields"
-        _LIST="list"
+	_LIST_FIELD_NAMES="listFields"
+	_LIST="list"
 	_DELIM="delimiter"
 	_DEF_DELIM="|"
 
@@ -106,11 +106,11 @@ class ListOutputter(Outputter):
 		self.initJSON(config)
 		outFile = config.get(ListOutputter._OUTPUT_FILE,ListOutputter._STDOUT)
 		if outFile == ListOutputter._STDOUT:
-                        self.outFH = sys.stdout
-                else:
-                        if instanceID != None:
-                                outFile = "%s.%s" % (outFile, instanceID)
-                        self.outFH = open(outFile,'w')	
+			self.outFH = sys.stdout
+		else:
+			if instanceID != None:
+					outFile = "%s.%s" % (outFile, instanceID)
+			self.outFH = open(outFile,'w')	
 		self.list = config[ListOutputter._LIST]
 		fieldNames = config.get(ListOutputter._FIELD_NAMES,None)
 		self.fields = [field.split(".") for field in fieldNames]
@@ -127,23 +127,23 @@ class ListOutputter(Outputter):
 		base = []
 		for field in self.fields:
 			val = record
-                        for part in field:
-                                try:
-                                        val = val[part]
-                                except KeyError:
-                                        dotNote = ".".join(field)
-                                        raise KeyError("Unable to find field "+part+ " in "+ dotNote)
+			for part in field:
+				try:
+						val = val[part]
+				except KeyError:
+						dotNote = ".".join(field)
+						raise KeyError("Unable to find field "+part+ " in "+ dotNote)
 			base.append(val)
 		for rec in listVal:
 			output = list(base)
 			for field in self.listFields:
 				val = rec
-	                        for part in field:
-        	                        try:
-                	                        val = val[part]
-                        	        except KeyError:
-                                	        dotNote = ".".join(field)
-                                        	raise KeyError("Unable to find field "+part+ " in "+ dotNote)
+				for part in field:
+						try:
+								val = val[part]
+						except KeyError:
+								dotNote = ".".join(field)
+								raise KeyError("Unable to find field "+part+ " in "+ dotNote)
 				output.append(val)
 			outputStr = [str(x) for x in output]
 			self.outFH.write(self.delim.join(outputStr)+"\n")

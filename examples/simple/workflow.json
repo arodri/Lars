@@ -2,43 +2,20 @@
 	"workflow": {
 		"mappers": [
 			{
-				"class":"mappers.timer.StartTimer",
+				"class":"mapper.util.timer.StartTimer",
 				"name":"total_timer_start",
 				"outputField":"TOTAL_TIME"
-			},
-			{
-				"class": "date_mapper.ObsDateMapper",
-				"linksetsName": "linksets",
-				"name": "obsDateMapper",
-				"obsDateField": "obsDate",
-				"obsDateFormat": "%Y%m%d"
 			},
 			{
 				"addressFields": [
 					"address"
 				],
 				"addressKey": "addressKey",
-				"class": "address_mapper.AddressKeyMapper",
+				"class": "mappers.address_mapper.AddressKeyMapper",
 				"name": "addressKey",
 				"zip": "zip"
-			},
-			{
-				"class": "linkage_crosstab.LinkageCrosstab",
-				"diffFields": [
-					"name"
-				],
-				"durations": [
-					30,
-					60,
-					365,
-					1024,
-					10000
-				],
-				"linksetsName": "linksets",
-				"name": "magicVariables",
-				"prefix": "magic"
 			},{
-				"class":"mappers.parallel.ParallelThreadMapper",
+				"class":"mapper.util.parallel.FuturesMapper",
 				"name":"just a test",
 				"pool_size": 2,
 				"mappers":[
@@ -47,7 +24,7 @@
 							"address"
 						],
 						"addressKey": "addressKey2",
-						"class": "address_mapper.AddressKeyMapper",
+						"class": "mappers.address_mapper.AddressKeyMapper",
 						"name": "addressKey2",
 						"zip": "zip",
 						"provides": ["addressKey2"]
@@ -57,23 +34,16 @@
 							"address"
 						],
 						"addressKey": "addressKey3",
-						"class": "address_mapper.AddressKeyMapper",
+						"class": "mappers.address_mapper.AddressKeyMapper",
 						"name": "addressKey3",
 						"zip": "zip",
 						"provides": ["addressKey3"]
 						
-					},{
-						"class": "mappers.query.SQLMapper",
-						"name":"testQuery",
-						"engine_url": "mysql://vars:varspassword@localhost/vars",
-						"query_logging": true,
-						"outputKey": "testQuery_out",
-						"queryString":"SELECT application_date FROM applications WHERE primary_ids='KAB19816'"
 					}
 				]
 			},
 			{
-				"class":"mappers.timer.EndTimer",
+				"class":"mapper.util.timer.EndTimer",
 				"name":"total_timer_end",
 				"outputField":"TOTAL_TIME"
 			}
@@ -83,16 +53,6 @@
 				"fields": [
 					"addressKey","addressKey2","addressKey3"
 				]
-			},
-			{
-				"after": "addressKey",
-				"class": "outputter.DumpOutputter",
-				"outputFile": "dump.addressKeys.out"
-			},
-			{
-				"delimiter": ",",
-				"formatFile": "example.fmt",
-				"outputFile": "example.vars.out"
 			},{
 				"class":"outputter.DumpOutputter",
 				"outputFile":"-"

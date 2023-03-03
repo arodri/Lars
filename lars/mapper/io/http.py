@@ -17,7 +17,7 @@ class HTTPRequest(Mapper):
 		self.timeout = config.get("timout",30)
 
 		if self.action not in self.valid_actions:
-			raise AttributeError, 'Invalid action: %s' % self.action
+			raise AttributeError('Invalid action: %s' % self.action)
 
 		self.session = requests.Session()
 		
@@ -43,15 +43,15 @@ class HTTPRequest(Mapper):
 	def getResponse(self, data=None, params=None):
 		try: 
 			return self.http_func(self.base_url, data=data, params=params, timeout=self.timeout)
-		except requests.exceptions.Timeout, e:
+		except requests.exceptions.Timeout as e:
 			self.logger.error("timeout exceeded on http request")
 			raise e
 
 	def makeRequestData(self,record):
-		raise NotImplementedError, 'makeRequest method on HTTPRequest has not been implemented'
+		raise NotImplementedError('makeRequest method on HTTPRequest has not been implemented')
 
 	def process(self, record):
-		raise NotImplementedError, 'process method on HTTPRequest object has not been implemented'
+		raise NotImplementedError('process method on HTTPRequest object has not been implemented')
 
 class JSONRequest(HTTPRequest):
 	

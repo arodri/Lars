@@ -43,7 +43,7 @@ class Mapper:
 		#self.context["record_id"] = record.get_record_id()
 		try:
 			record = self.process(record)
-		except Exception, e:
+		except Exception as e:
 			self.logger.error('MapperError: %s' % self.name)
 			self.logger.exception(e)
 			if error:

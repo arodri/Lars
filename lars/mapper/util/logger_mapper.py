@@ -6,7 +6,7 @@ def jsonOutput(logOutput):
 	return json.dumps(logOutput)
 
 def listOutput(logOutput):
-	return str(logOutput.items())
+	return str(list(logOutput.items()))
 
 class LoggerMapper(Mapper):
 
@@ -42,7 +42,7 @@ class LoggerMapper(Mapper):
 
 	def process(self,record):
 		logOutput = {}
-		for logName,recordName in self.fieldMap.items():
+		for logName,recordName in list(self.fieldMap.items()):
 			logOutput[logName] = record[recordName]
 		self.logger.log(self.logLevel,self.outputHandler(logOutput))
 		return record

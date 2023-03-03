@@ -57,14 +57,14 @@ class Driver(object):
 		try:
 			process.terminate()
 			process.wait()
-		except OSError,e:
+		except OSError as e:
 			pass
 
 	@staticmethod
 	def stop_processes(processes):
 		if len(processes) > 0:
 			#p = Pool(len(processes))
-			map(Driver.stop_process, processes)
+			list(map(Driver.stop_process, processes))
 
 	def stop_all(self):
 
@@ -124,7 +124,7 @@ class Driver(object):
 		for feeder in self.feeders:
 			try:
 				is_done.append(feeder.poll() != None)
-			except OSError,e:
+			except OSError as e:
 				is_done.append(True)
 		return all(is_done)
 
@@ -134,7 +134,7 @@ class Driver(object):
 
 
 	def start_haproxy(self, haproxy_port, var_proxy_port, var_ports):
-		var_nodes = zip(["var%s" % port for port in var_ports ], var_ports)
+		var_nodes = list(zip(["var%s" % port for port in var_ports ], var_ports))
 		with open('%s/config/haproxy.jinja2.cfg' % LARSDIR, 'r') as cfg_template:
 			with open('%s/haproxy.cfg' % self.logdir, 'w') as cfg:
 				template = Template(cfg_template.read())
@@ -211,7 +211,7 @@ class Driver(object):
 				self.logger.info("feeders started")
 			self.run_loop()
 
-		except Exception,e:
+		except Exception as e:
 			self.logger.error("Oh no, something went terribly wrong! Check the logs!")
 			self.logger.exception(e)
 			self.stop_all()
